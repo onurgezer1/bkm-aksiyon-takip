@@ -769,10 +769,15 @@ jQuery(document).ready(function($) {
                     if (typeof toggleActionForm === 'function') {
                         toggleActionForm();
                     }
-                    // Page refresh to show new action
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 1500);
+                    // Aksiyon listesini yenile (sayfa reload yerine)
+                    if (typeof refreshActions === 'function') {
+                        refreshActions();
+                    } else {
+                        // Fallback olarak sayfa yenile
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    }
                 } else {
                     var errorMessage = 'Aksiyon eklenirken hata oluştu.';
                     if (response && response.data) {
@@ -925,9 +930,13 @@ jQuery(document).ready(function($) {
                         toggleTaskForm();
                     }
                     // Page refresh to show new task
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 1500);
+                    if (typeof refreshActions === 'function') {
+                        refreshActions();
+                    } else {
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    }
                 } else {
                     var errorMessage = 'Görev eklenirken hata oluştu.';
                     if (response && response.data) {
@@ -2729,6 +2738,123 @@ window.toggleReplyForm = function(taskId, noteId) {
     // - escapeHtml()
     // - escapeJs()
     
+    // Global user cache
+    var usersCache = {};
+
+    // Actions refresh fonksiyonu
+    function refreshActions() {
+        $.ajax({
+            url: bkm_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'bkm_get_actions',
+                nonce: bkm_ajax.nonce
+            },
+            success: function(response) {
+                if (response.success && response.data) {
+                    updateActionsTable(response.data);
+                } else {
+                    console.error('Aksiyon listesi yenilenemedi:', response.data);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX hatası:', error);
+            }
+        });
+    }
+
+    // Actions tablosunu güncelleme fonksiyonu
+    function updateActionsTable(actions) {
+        var tbody = $('.bkm-table tbody');
+        if (tbody.length === 0) {
+            console.error('Actions table tbody bulunamadı');
+            return;
+        }
+
+        tbody.empty();
+
+        if (actions.length === 0) {
+            tbody.append('<tr><td colspan="8">Henüz aksiyon bulunmamaktadır.</td></tr>');
+            return;
+        }
+
+        actions.forEach(function(action) {
+            var row = $('<tr>');
+            
+            // ID
+            row.append('<td>' + action.id + '</td>');
+            
+            // Tanımlayan
+            row.append('<td><span class="bkm-user-badge">' + (action.tanımlayan_name || 'Bilinmiyor') + '</span></td>');
+            
+            // Sorumlu Kişiler  
+            var sorumluCell = '<td>';
+            if (action.sorumlu_ids) {
+                var sorumluIds = action.sorumlu_ids.split(',');
+                sorumluIds.forEach(function(id) {
+                    sorumluCell += '<span class="bkm-user-badge">' + getUserDisplayName(id.trim()) + '</span>';
+                });
+            } else {
+                sorumluCell += '-';
+            }
+            sorumluCell += '</td>';
+            row.append(sorumluCell);
+            
+            // Kategori
+            row.append('<td><span class="bkm-category-badge">' + (action.kategori_name || '-') + '</span></td>');
+            
+            // Tespit Konusu
+            row.append('<td>' + (action.tespit_konusu || '-') + '</td>');
+            
+            // Önem
+            var onemBadge = getOnemBadge(action.onem);
+            row.append('<td>' + onemBadge + '</td>');
+            
+            // İlerleme
+            var progressBar = '<div class="bkm-progress-bar" style="width: ' + (action.ilerleyis || 0) + '%"></div>';
+            row.append('<td>' + progressBar + '</td>');
+            
+            // Durum
+            var durumBadge = getDurumBadge(action.durum);
+            row.append('<td>' + durumBadge + '</td>');
+            
+            // Görevler  
+            var gorevBtn = '<button class="bkm-btn bkm-btn-info bkm-btn-sm" onclick="showActionTasks(' + action.id + ')">' +
+                          '<i class="fas fa-tasks"></i> Detaylar</button> ' +
+                          '<span class="bkm-task-count">Görevler (0)</span>';
+            row.append('<td>' + gorevBtn + '</td>');
+            
+            tbody.append(row);
+        });
+    }
+
+    // Helper fonksiyonları
+    function getUserDisplayName(userId) {
+        userId = parseInt(userId);
+        if (window.usersCache && window.usersCache[userId]) {
+            return window.usersCache[userId].display_name;
+        }
+        return 'User ' + userId;
+    }
+
+    function getOnemBadge(onem) {
+        var badges = {
+            'YÜKSEK': '<span class="bkm-onem-badge yuksek">YÜKSEK</span>',
+            'ORTA': '<span class="bkm-onem-badge orta">ORTA</span>',
+            'DÜŞÜK': '<span class="bkm-onem-badge dusuk">DÜŞÜK</span>'
+        };
+        return badges[onem] || '<span class="bkm-onem-badge orta">ORTA</span>';
+    }
+
+    function getDurumBadge(durum) {
+        var badges = {
+            'ACİL': '<span class="bkm-durum-badge acil">ACİL</span>',
+            'NORMAL': '<span class="bkm-durum-badge normal">NORMAL</span>',
+            'BEKLEMEDE': '<span class="bkm-durum-badge beklemede">BEKLEMEDE</span>'
+        };
+        return badges[durum] || '<span class="bkm-durum-badge normal">NORMAL</span>';
+    }
+
     // Dropdown refresh fonksiyonları
     function refreshCategoryDropdown() {
         console.log('🔄 Kategori dropdown ve liste yenileniyor...');
@@ -2957,6 +3083,8 @@ window.toggleReplyForm = function(taskId, noteId) {
     window.refreshCategoryList = refreshCategoryList;
     window.refreshPerformanceDropdown = refreshPerformanceDropdown;
     window.refreshPerformanceList = refreshPerformanceList;
+    window.refreshActions = refreshActions;
+    window.updateActionsTable = updateActionsTable;
     window.displayUsers = displayUsers;
     window.handleUserFormSubmit = handleUserFormSubmit;
     window.clearUserForm = clearUserForm;

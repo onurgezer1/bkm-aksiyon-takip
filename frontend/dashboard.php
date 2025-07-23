@@ -42,18 +42,10 @@ $is_editor = in_array('editor', $user_roles);
 $is_contributor = in_array('contributor', $user_roles);
 $current_user_id = $current_user->ID;
 
-error_log("🔍 Frontend Dashboard User Info - Is Admin: " . ($is_admin ? 'true' : 'false') . ", Is Editor: " . ($is_editor ? 'true' : 'false') . ", User roles: " . implode(', ', $user_roles) . ", User ID: " . $current_user_id);
 
-// Check if user has created any actions
-$user_created_actions = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $actions_table WHERE tanımlayan_id = %d", $current_user_id));
-error_log("🔍 Frontend Dashboard - Actions created by user: " . $user_created_actions);
-
-// Check if user is responsible for any actions
-$user_responsible_actions = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $actions_table WHERE sorumlu_ids LIKE %s", '%' . $wpdb->esc_like($current_user_id) . '%'));
-error_log("🔍 Frontend Dashboard - Actions user is responsible for: " . $user_responsible_actions);
 
 // Debug: Test mode to see all actions regardless of user permissions
-$debug_show_all_actions = true; // Temporarily set to true for debugging
+$debug_show_all_actions = false; // Disabled for production
 
 if ($debug_show_all_actions || $is_admin || $is_editor) {
     // Admins and editors (and debug mode) see all actions
@@ -66,7 +58,7 @@ if ($debug_show_all_actions || $is_admin || $is_editor) {
                      LEFT JOIN $categories_table c ON a.kategori_id = c.id
                      LEFT JOIN $performance_table p ON a.performans_id = p.id
                      ORDER BY a.created_at DESC";
-    error_log("🔍 Frontend Dashboard - Using ADMIN/DEBUG query (show all actions)");
+
 } else {
     // Non-admins see actions they created OR are responsible for
     $actions_query = $wpdb->prepare(
@@ -83,20 +75,23 @@ if ($debug_show_all_actions || $is_admin || $is_editor) {
         $current_user_id,
         '%' . $wpdb->esc_like($current_user_id) . '%'
     );
-    error_log("🔍 Frontend Dashboard - Using USER-SPECIFIC query");
+
 }
 
 $actions = $wpdb->get_results($actions_query);
 
-// Debug: Actions count and query
-error_log("🔍 Frontend Dashboard - Actions Query: " . $actions_query);
-error_log("🔍 Frontend Dashboard - Actions Count: " . count($actions));
-error_log("🔍 Frontend Dashboard - User ID: " . $current_user_id . ", Is Admin: " . ($is_admin ? 'Yes' : 'No') . ", Is Editor: " . ($is_editor ? 'Yes' : 'No'));
-if (count($actions) > 0) {
-    error_log("🔍 Frontend Dashboard - First Action ID: " . $actions[0]->id . ", Title: " . ($actions[0]->tespit_konusu ?: $actions[0]->title));
-} else {
-    error_log("🔍 Frontend Dashboard - No actions found. Database error: " . ($wpdb->last_error ?: 'None'));
+// Get all users for JavaScript cache
+$all_users = $wpdb->get_results("SELECT ID, display_name, user_login FROM {$wpdb->users} ORDER BY display_name");
+$users_for_js = array();
+foreach ($all_users as $user) {
+    $users_for_js[$user->ID] = array(
+        'id' => $user->ID,
+        'display_name' => $user->display_name,
+        'user_login' => $user->user_login
+    );
 }
+
+
 
 // Define display_notes function once at the top
 function display_notes($notes, $parent_id = null, $level = 0, $is_admin_param = false, $task = null) {
@@ -1313,23 +1308,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
             
             <!-- Actions Table -->
             <div class="bkm-actions-table">
-                <!-- Debug Info - Remove after fixing -->
-                <div style="background: #fffbee; border: 1px solid #f39c12; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; font-size: 12px;">
-                    <strong>🔍 DEBUG BİLGİLERİ:</strong><br>
-                    - Toplam Actions: <?php echo count($actions); ?><br>
-                    - User ID: <?php echo $current_user_id; ?><br>
-                    - User Roles: <?php echo implode(', ', $user_roles); ?><br>
-                    - Is Admin: <?php echo $is_admin ? 'Yes' : 'No'; ?><br>
-                    - Debug Mode: <?php echo $debug_show_all_actions ? 'ACTIVE' : 'Off'; ?><br>
-                    - Query: <?php echo esc_html(substr($actions_query, 0, 100)); ?>...<br>
-                    <?php if (count($actions) > 0): ?>
-                        - First Action ID: <?php echo $actions[0]->id; ?><br>
-                        - First Action Title: <?php echo esc_html(substr($actions[0]->tespit_konusu ?: $actions[0]->title ?: 'No title', 0, 50)); ?><br>
-                    <?php endif; ?>
-                    <?php if ($wpdb->last_error): ?>
-                        - DB Error: <?php echo esc_html($wpdb->last_error); ?>
-                    <?php endif; ?>
-                </div>
                 <table class="bkm-table">
                     <thead>
                         <tr>
@@ -2092,6 +2070,12 @@ function toggleReportsDropdown(e) {
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof loadCompanyInfo === 'function') {
         loadCompanyInfo();
+    }
+    
+    // User cache'ini global olarak ayarla
+    if (typeof window.usersCache !== 'undefined') {
+        window.usersCache = <?php echo json_encode($users_for_js); ?>;
+        console.log('👥 Users cache ayarlandı:', window.usersCache);
     }
 });
 </script>

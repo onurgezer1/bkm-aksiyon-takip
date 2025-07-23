@@ -2061,7 +2061,7 @@ public function ajax_get_actions() {
     $performance_table = $wpdb->prefix . 'bkm_performances';
     
     // Debug: Same logic as dashboard.php
-    $debug_show_all_actions = true; // Temporarily set to true for debugging
+    $debug_show_all_actions = false; // Disabled for production
     
     if ($debug_show_all_actions || $is_admin || $is_editor) {
         // Admins and editors (and debug mode) see all actions
@@ -2074,7 +2074,7 @@ public function ajax_get_actions() {
                          LEFT JOIN $categories_table c ON a.kategori_id = c.id
                          LEFT JOIN $performance_table p ON a.performans_id = p.id
                          ORDER BY a.created_at DESC";
-        error_log("🔍 AJAX get_actions - Using ADMIN/DEBUG query (show all actions)");
+
     } else {
         // Non-admins see actions they created OR are responsible for
         $actions_query = $wpdb->prepare(
@@ -2091,12 +2091,12 @@ public function ajax_get_actions() {
             $current_user_id,
             '%' . $wpdb->esc_like($current_user_id) . '%'
         );
-        error_log("🔍 AJAX get_actions - Using USER-SPECIFIC query");
+
     }
     
     $actions = $wpdb->get_results($actions_query);
     
-    error_log("🔍 AJAX get_actions - User ID: " . $current_user_id . ", Is Admin: " . ($is_admin ? 'Yes' : 'No') . ", Actions Count: " . count($actions));
+
     
     wp_send_json_success($actions);
 }
