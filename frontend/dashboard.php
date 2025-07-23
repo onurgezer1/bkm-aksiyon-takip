@@ -74,6 +74,16 @@ if ($is_admin || $is_editor) {
 
 $actions = $wpdb->get_results($actions_query);
 
+// Debug: Actions count and query
+error_log("🔍 Frontend Dashboard - Actions Query: " . $actions_query);
+error_log("🔍 Frontend Dashboard - Actions Count: " . count($actions));
+error_log("🔍 Frontend Dashboard - User ID: " . $current_user_id . ", Is Admin: " . ($is_admin ? 'Yes' : 'No') . ", Is Editor: " . ($is_editor ? 'Yes' : 'No'));
+if (count($actions) > 0) {
+    error_log("🔍 Frontend Dashboard - First Action ID: " . $actions[0]->id . ", Title: " . ($actions[0]->tespit_konusu ?: $actions[0]->title));
+} else {
+    error_log("🔍 Frontend Dashboard - No actions found. Database error: " . ($wpdb->last_error ?: 'None'));
+}
+
 // Define display_notes function once at the top
 function display_notes($notes, $parent_id = null, $level = 0, $is_admin_param = false, $task = null) {
     global $wpdb, $current_user_id;
