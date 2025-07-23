@@ -2810,13 +2810,20 @@ window.toggleReplyForm = function(taskId, noteId) {
     }
 
     // Actions refresh fonksiyonu
-    function refreshActions() {
-        console.log('🔄 refreshActions çağrıldı');
+    function refreshActions(showNotifications) {
+        // Default to true if not specified for backwards compatibility
+        if (showNotifications === undefined) {
+            showNotifications = true;
+        }
+        
+        console.log('🔄 refreshActions çağrıldı, showNotifications:', showNotifications);
         
         // Frontend objesinin varlığını kontrol et
         if (typeof bkmFrontend === 'undefined' || !bkmFrontend.ajax_url) {
             console.error('❌ bkmFrontend objesi bulunamadı, sayfa yenileniyor...');
-            showNotification('Sistem hazır değil, sayfa yenileniyor...', 'warning');
+            if (showNotifications) {
+                showNotification('Sistem hazır değil, sayfa yenileniyor...', 'warning');
+            }
             setTimeout(function() {
                 window.location.reload();
             }, 1500);
@@ -2840,10 +2847,18 @@ window.toggleReplyForm = function(taskId, noteId) {
                 if (response && response.success && response.data) {
                     updateActionsTable(response.data);
                     updateActionDropdown(response.data); // Görev ekleme formundaki dropdown'ı da güncelle
-                    showNotification('Aksiyon listesi güncellendi (' + response.data.length + ' aksiyon)', 'success');
+                    
+                    // Only show notification if requested
+                    if (showNotifications) {
+                        showNotification('Aksiyon listesi güncellendi (' + response.data.length + ' aksiyon)', 'success');
+                    }
                 } else {
                     console.error('❌ Aksiyon listesi yenilenemedi:', response);
-                    showNotification('Aksiyon listesi yenilenemedi - yanıt formatı hatalı', 'error');
+                    
+                    // Only show error notification if requested
+                    if (showNotifications) {
+                        showNotification('Aksiyon listesi yenilenemedi - yanıt formatı hatalı', 'error');
+                    }
                     
                     // Debug için response'u tam göster
                     if (typeof response === 'object') {
@@ -3338,8 +3353,9 @@ window.toggleReplyForm = function(taskId, noteId) {
         if ($('#action_id').length > 0) {
             console.log('📝 Görev ekleme formu tespit edildi, aksiyon dropdown yükleniyor...');
             // 2 saniye gecikme ile dropdown'ı güncelle (sayfa tam yüklendikten sonra)
+            // Silent refresh - no notifications on page load
             setTimeout(function() {
-                refreshActions();
+                refreshActions(false);
             }, 2000);
         }
         

@@ -2160,14 +2160,28 @@ public function ajax_get_tasks() {
     
     $table_name = $wpdb->prefix . 'bkm_tasks';
     
-    // Debug: Same logic as dashboard.php
-    $debug_show_all_tasks = true; // Temporarily set to true for debugging
+    // Use consistent permission logic with dashboard.php
+    $debug_show_all_tasks = defined('BKM_DEBUG_SHOW_ALL_TASKS') && BKM_DEBUG_SHOW_ALL_TASKS;
     
     if ($action_id > 0) {
         // If specific action_id is requested, get tasks for that action only
         if ($debug_show_all_tasks || $is_admin || $is_editor) {
-            // Admin/Editor can see all tasks
-            $tasks = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_name WHERE action_id = %d ORDER BY created_at DESC", $action_id));
+            // Admin/Editor can see all tasks - include user names like dashboard.php
+            $tasks = $wpdb->get_results($wpdb->prepare(
+                "SELECT t.*, 
+                        CASE 
+                            WHEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value)) != ''
+                            THEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value))
+                            ELSE u.display_name
+                        END as sorumlu_name 
+                 FROM $table_name t 
+                 LEFT JOIN {$wpdb->users} u ON t.sorumlu_id = u.ID 
+                 LEFT JOIN {$wpdb->usermeta} um1 ON u.ID = um1.user_id AND um1.meta_key = 'first_name'
+                 LEFT JOIN {$wpdb->usermeta} um2 ON u.ID = um2.user_id AND um2.meta_key = 'last_name'
+                 WHERE t.action_id = %d 
+                 ORDER BY t.created_at DESC",
+                $action_id
+            ));
         } else {
             // Non-admin: Check if they have access to this action first
             $actions_table = $wpdb->prefix . 'bkm_actions';
@@ -2179,7 +2193,21 @@ public function ajax_get_tasks() {
             ));
             
             if ($action_access > 0) {
-                $tasks = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_name WHERE action_id = %d ORDER BY created_at DESC", $action_id));
+                $tasks = $wpdb->get_results($wpdb->prepare(
+                    "SELECT t.*, 
+                            CASE 
+                                WHEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value)) != ''
+                                THEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value))
+                                ELSE u.display_name
+                            END as sorumlu_name 
+                     FROM $table_name t 
+                     LEFT JOIN {$wpdb->users} u ON t.sorumlu_id = u.ID 
+                     LEFT JOIN {$wpdb->usermeta} um1 ON u.ID = um1.user_id AND um1.meta_key = 'first_name'
+                     LEFT JOIN {$wpdb->usermeta} um2 ON u.ID = um2.user_id AND um2.meta_key = 'last_name'
+                     WHERE t.action_id = %d 
+                     ORDER BY t.created_at DESC",
+                    $action_id
+                ));
             } else {
                 wp_send_json_error('Bu aksiyonun görevlerini görme yetkiniz yok.');
             }
@@ -2188,12 +2216,33 @@ public function ajax_get_tasks() {
         // Get all tasks (filtered by user permissions)
         if ($debug_show_all_tasks || $is_admin || $is_editor) {
             // Admin/Editor can see all tasks
-            $tasks = $wpdb->get_results("SELECT * FROM $table_name ORDER BY created_at DESC");
+            $tasks = $wpdb->get_results(
+                "SELECT t.*, 
+                        CASE 
+                            WHEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value)) != ''
+                            THEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value))
+                            ELSE u.display_name
+                        END as sorumlu_name 
+                 FROM $table_name t 
+                 LEFT JOIN {$wpdb->users} u ON t.sorumlu_id = u.ID 
+                 LEFT JOIN {$wpdb->usermeta} um1 ON u.ID = um1.user_id AND um1.meta_key = 'first_name'
+                 LEFT JOIN {$wpdb->usermeta} um2 ON u.ID = um2.user_id AND um2.meta_key = 'last_name'
+                 ORDER BY t.created_at DESC"
+            );
         } else {
             // Non-admin: Only tasks for actions they have access to
             $actions_table = $wpdb->prefix . 'bkm_actions';
             $tasks = $wpdb->get_results($wpdb->prepare(
-                "SELECT t.* FROM $table_name t 
+                "SELECT t.*, 
+                        CASE 
+                            WHEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value)) != ''
+                            THEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value))
+                            ELSE u.display_name
+                        END as sorumlu_name 
+                 FROM $table_name t 
+                 LEFT JOIN {$wpdb->users} u ON t.sorumlu_id = u.ID 
+                 LEFT JOIN {$wpdb->usermeta} um1 ON u.ID = um1.user_id AND um1.meta_key = 'first_name'
+                 LEFT JOIN {$wpdb->usermeta} um2 ON u.ID = um2.user_id AND um2.meta_key = 'last_name'
                  INNER JOIN $actions_table a ON t.action_id = a.id 
                  WHERE (a.tanımlayan_id = %d OR a.sorumlu_ids LIKE %s OR t.sorumlu_id = %d)
                  ORDER BY t.created_at DESC",
