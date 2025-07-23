@@ -1,0 +1,341 @@
+/* BKM Aksiyon Takip - Admin Styles */
+
+.bkm-dashboard {
+    margin: 20px 0;
+}
+
+.bkm-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.bkm-stat-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.bkm-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.bkm-stat-number {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #2271b1;
+    margin-bottom: 10px;
+}
+
+.bkm-stat-label {
+    color: #666;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bkm-recent-actions {
+    margin-bottom: 30px;
+}
+
+.bkm-recent-actions h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.bkm-priority {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.bkm-priority.priority-1 {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.bkm-priority.priority-2 {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.bkm-priority.priority-3 {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.bkm-progress {
+    position: relative;
+    background: #f1f1f1;
+    border-radius: 10px;
+    height: 20px;
+    overflow: hidden;
+}
+
+.bkm-progress-bar {
+    background: linear-gradient(90deg, #4CAF50, #45a049);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.bkm-progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+}
+
+.bkm-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.bkm-status.status-open {
+    background: #d4edda;
+    color: #155724;
+}
+
+.bkm-status.status-closed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.bkm-quick-actions {
+    margin-top: 30px;
+}
+
+.bkm-quick-actions h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.bkm-quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.bkm-quick-action {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    background: #fff;
+    border: 2px solid #2271b1;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #2271b1;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.bkm-quick-action:hover {
+    background: #2271b1;
+    color: #fff;
+    text-decoration: none;
+}
+
+.bkm-quick-action .dashicons {
+    margin-right: 10px;
+    font-size: 20px;
+}
+
+/* Form Styles */
+.bkm-form table.form-table {
+    margin-top: 20px;
+}
+
+.bkm-form .form-table th {
+    width: 200px;
+    padding: 15px 0;
+}
+
+.bkm-form .form-table td {
+    padding: 15px 0;
+}
+
+.bkm-form input[type="text"],
+.bkm-form input[type="number"],
+.bkm-form input[type="email"],
+.bkm-form select,
+.bkm-form textarea {
+    width: 100%;
+    max-width: 400px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.bkm-form select.bkm-multi-select {
+    height: 100px;
+}
+
+.bkm-form .description {
+    font-style: italic;
+    color: #666;
+    margin-top: 5px;
+}
+
+.bkm-progress-preview {
+    margin-top: 10px;
+    max-width: 400px;
+}
+
+/* Categories/Performance Pages */
+.bkm-categories-page,
+.bkm-performance-page {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.bkm-form-section {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    height: fit-content;
+}
+
+.bkm-form-section h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.bkm-list-section {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.bkm-list-section h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.bkm-usage-count {
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #495057;
+}
+
+.submit-section {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+/* Reports Page */
+.bkm-reports-page {
+    margin: 20px 0;
+}
+
+.bkm-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.bkm-chart-container {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.bkm-chart-container.bkm-chart-wide {
+    grid-column: 1 / -1;
+}
+
+.bkm-chart-container h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+}
+
+.bkm-chart-container canvas {
+    max-height: 300px;
+}
+
+.bkm-user-performance {
+    margin-top: 30px;
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.bkm-user-performance h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.bkm-table-container {
+    overflow-x: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .bkm-stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+    }
+    
+    .bkm-categories-page,
+    .bkm-performance-page {
+        grid-template-columns: 1fr;
+    }
+    
+    .bkm-charts-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .bkm-quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Notification Styles */
+.notice.notice-success,
+.bkm-success {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    color: #155724;
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.notice.notice-error,
+.bkm-error {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+}

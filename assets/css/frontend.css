@@ -1,0 +1,3097 @@
+/* BKM Aksiyon Takip - Frontend Styles - Güncellenmiş Versiyon */
+
+/* BKM Aksiyon Takip Frontend CSS - WordPress Tema Override */
+
+/* WordPress tema stillerini geçersiz kıl */
+.bkm-frontend-container * {
+    box-sizing: border-box !important;
+}
+
+.bkm-frontend-container table,
+.bkm-frontend-container th, 
+.bkm-frontend-container td {
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+}
+
+.bkm-frontend-container button,
+.bkm-frontend-container input,
+.bkm-frontend-container select,
+.bkm-frontend-container textarea {
+    font-family: inherit !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+}
+
+.bkm-frontend-container h1,
+.bkm-frontend-container h2, 
+.bkm-frontend-container h3,
+.bkm-frontend-container h4,
+.bkm-frontend-container h5,
+.bkm-frontend-container h6 {
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+    margin-top: 0 !important;
+}
+
+.bkm-frontend-container {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif !important;
+    background: #f8f9fa !important;
+    min-height: 100vh !important;
+}
+
+/* ===========================================
+   LOGIN FORM STYLES - GÜVENLİK GÜNCELLEMELİ
+   =========================================== */
+.bkm-login-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+}
+
+.bkm-login-form {
+    background: #fff;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid #e9ecef;
+    position: relative;
+}
+
+.bkm-login-form h2 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #2c3e50;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.bkm-login-form p {
+    text-align: center;
+    color: #6c757d;
+    margin-bottom: 30px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* FORM FIELD STYLES */
+.bkm-field {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.bkm-field label {
+    display: block;
+    margin-bottom: 8px;
+    color: #495057;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.bkm-field label .required {
+    color: #dc3545;
+    margin-left: 3px;
+    font-weight: 600;
+}
+
+.bkm-field input[type="text"],
+.bkm-field input[type="password"],
+.bkm-field input[type="email"],
+.bkm-field input[type="date"],
+.bkm-field input[type="number"],
+.bkm-field textarea,
+.bkm-field select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    background: #fff;
+}
+
+.bkm-field input:focus,
+.bkm-field textarea:focus,
+.bkm-field select:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+}
+
+/* HATA DURUMU STILLERI */
+.bkm-field input.error,
+.bkm-field textarea.error,
+.bkm-field select.error {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+    background-color: #fff5f5;
+}
+
+.bkm-field-error {
+    display: block;
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 5px;
+    font-weight: 500;
+    min-height: 18px;
+}
+
+/* PASSWORD FIELD WITH TOGGLE */
+.bkm-password-field {
+    position: relative;
+}
+
+.bkm-password-field input {
+    padding-right: 45px;
+}
+
+.bkm-password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6c757d;
+    padding: 5px;
+    font-size: 16px;
+    border-radius: 4px;
+    transition: color 0.3s ease;
+}
+
+.bkm-password-toggle:hover {
+    color: #495057;
+    background-color: #f8f9fa;
+}
+
+/* ICON STYLES */
+.bkm-icon-error::before {
+    content: "⚠";
+    font-size: 16px;
+}
+
+.bkm-icon-success::before {
+    content: "✓";
+    font-size: 16px;
+}
+
+.bkm-icon-eye::before {
+    content: "👁";
+}
+
+.bkm-icon-eye-slash::before {
+    content: "👁‍🗨";
+}
+
+/* ALERT MESSAGES */
+.bkm-error,
+.bkm-success {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.bkm-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-left: 4px solid #dc3545;
+}
+
+.bkm-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    border-left: 4px solid #28a745;
+}
+
+.bkm-error i,
+.bkm-success i {
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+/* BUTTON STYLES - Daha küçük ve uyumlu boyutlar */
+.bkm-btn {
+    display: inline-block !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    border: none !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    line-height: 1.3 !important;
+    position: relative !important;
+    min-height: auto !important;
+    user-select: none !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+}
+
+.bkm-btn-primary {
+    background: #007cba !important;
+    color: #fff !important;
+}
+
+.bkm-btn-primary:hover:not(:disabled) {
+    background: #005a87 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 8px rgba(0, 124, 186, 0.25) !important;
+}
+
+.bkm-btn-secondary {
+    background: #6c757d !important;
+    color: #fff !important;
+}
+
+.bkm-btn-warning {
+    background: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.bkm-btn-success {
+    background: #28a745 !important;
+    color: #fff !important;
+}
+
+.bkm-btn-danger {
+    background: #dc3545 !important;
+    color: #fff !important;
+}
+
+.bkm-btn-info {
+    background: #17a2b8 !important;
+    color: #fff !important;
+}
+
+.bkm-btn-small {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    min-height: auto !important;
+}
+
+.bkm-login-form .bkm-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+/* LOADING STATE */
+.btn-loading {
+    display: none;
+}
+
+.bkm-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { 
+        transform: rotate(360deg); 
+    }
+}
+
+/* LOGIN HELP */
+.bkm-login-help {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+.bkm-login-help a {
+    color: #007cba;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.bkm-login-help a:hover {
+    text-decoration: underline;
+}
+
+/* ===========================================
+   DASHBOARD STYLES
+   =========================================== */
+.bkm-dashboard {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.bkm-dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #fff !important;
+    padding: 30px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-radius: 8px !important;
+    margin-bottom: 20px !important;
+}
+
+.bkm-dashboard-header h1 {
+    margin: 0 !important;
+    font-size: 28px !important;
+    font-weight: 600 !important;
+    color: #fff !important;
+}
+
+.bkm-user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 14px;
+}
+
+.bkm-user-info .bkm-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
+.bkm-logout {
+    color: #fff;
+    text-decoration: none;
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 6px;
+    transition: background 0.3s ease;
+    font-weight: 500;
+}
+
+.bkm-logout:hover {
+    background: rgba(255,255,255,0.3);
+    text-decoration: none;
+    color: #fff;
+}
+
+/* ===========================================
+   ACTIONS SECTION
+   =========================================== */
+.bkm-actions-section {
+    padding: 30px !important;
+    background: #fff !important;
+    border-radius: 8px !important;
+    margin: 20px 0 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+
+.bkm-section-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 25px !important;
+    padding-bottom: 15px !important;
+    border-bottom: 2px solid #e9ecef !important;
+}
+
+.bkm-section-header h2 {
+    margin: 0 !important;
+    color: #2c3e50 !important;
+    font-size: 22px !important;
+    font-weight: 600 !important;
+}
+
+/* Action buttons styling */
+.bkm-action-buttons {
+    display: flex !important;
+    gap: 10px !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+}
+
+.bkm-action-buttons .bkm-btn {
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+}
+
+.bkm-action-buttons .bkm-btn-small {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+}
+
+/* ===========================================
+   TASK FORM
+   =========================================== */
+.bkm-task-form {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    border: 1px solid #e9ecef;
+}
+
+.bkm-task-form h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #2c3e50;
+    font-size: 18px;
+}
+
+.bkm-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.bkm-form-grid .bkm-field {
+    margin-bottom: 0;
+}
+
+.bkm-form-grid .bkm-field input,
+.bkm-form-grid .bkm-field textarea,
+.bkm-form-grid .bkm-field select {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f0f9ff 100%); /* Güzel mavi gradyan */
+    color: #1565c0; /* Koyu mavi yazı rengi */
+    border: 2px solid #90caf9; /* Açık mavi kenarlık */
+    padding: 12px 16px;
+    width: 100%;
+    box-sizing: border-box;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.bkm-form-grid .bkm-field input::placeholder,
+.bkm-form-grid .bkm-field textarea::placeholder {
+    color: #64b5f6; /* Mavi placeholder rengi */
+    opacity: 0.8;
+}
+
+.bkm-form-grid .bkm-field input:focus,
+.bkm-form-grid .bkm-field textarea:focus,
+.bkm-form-grid .bkm-field select:focus {
+    outline: none;
+    border-color: #1976d2; /* Daha koyu mavi focus rengi */
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.2);
+    background: linear-gradient(135deg, #e1f5fe 0%, #f3e5f5 100%);
+    transform: translateY(-1px);
+}
+
+.bkm-form-grid .bkm-field select option {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f0f9ff 100%); /* Mavi gradyan */
+    color: #1565c0; /* Koyu mavi yazı rengi */
+    padding: 8px 12px;
+}
+
+.bkm-form-actions {
+    display: flex;
+    gap: 10px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+    justify-content: flex-start;
+}
+
+/* ===========================================
+   TABLE STYLES
+   =========================================== */
+.bkm-actions-table {
+    overflow-x: auto;
+}
+
+.bkm-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    background: #fff !important;
+    font-size: 14px !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+    margin: 20px 0 !important;
+}
+
+.bkm-table th,
+.bkm-table td {
+    padding: 12px 15px !important;
+    text-align: left !important;
+    border-bottom: 1px solid #e9ecef !important;
+}
+
+.bkm-table th {
+    background: #f8f9fa !important;
+    font-weight: 600 !important;
+    color: #495057 !important;
+    border-bottom: 2px solid #dee2e6 !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+}
+
+/* Tablo içindeki butonları optimal boyutla ayarla */
+.bkm-table .bkm-btn {
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+    border-radius: 5px !important;
+    font-weight: 500 !important;
+    margin: 2px !important;
+    min-height: auto !important;
+    white-space: nowrap !important;
+}
+
+.bkm-table .bkm-btn-small {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+}
+
+.bkm-action-buttons-cell {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+}
+
+/* Görevler sütununun genişliğini optimize et */
+.bkm-table td.bkm-action-buttons-cell {
+    min-width: 140px !important;
+    width: auto !important;
+}
+
+.bkm-table tbody tr:hover {
+    background: #f8f9fa !important;
+}
+
+.bkm-action-desc {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Tablo içindeki butonları optimal boyutla ayarla */
+.bkm-table .bkm-btn {
+    padding: 12px 18px !important;
+    font-size: 12px !important;
+    border-radius: 5px !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+    min-height: auto !important;
+    white-space: nowrap !important;
+}
+
+.bkm-table .bkm-btn-small {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+}
+
+.bkm-action-buttons-cell {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+}
+
+/* ===========================================
+   PRIORITY STYLES
+   =========================================== */
+.bkm-priority {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.bkm-priority.priority-1 {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.bkm-priority.priority-2 {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.bkm-priority.priority-3 {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* ===========================================
+   PROGRESS BAR
+   =========================================== */
+.bkm-progress {
+    position: relative;
+    background: #e9ecef;
+    border-radius: 10px;
+    height: 20px;
+    overflow: hidden;
+    min-width: 90px;
+}
+
+.bkm-progress-bar {
+    background: linear-gradient(90deg, #28a745, #20c997);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.bkm-progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    font-weight: 600;
+    color: #495057;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.7);
+    z-index: 1;
+}
+
+/* ===========================================
+   STATUS STYLES
+   =========================================== */
+.bkm-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.bkm-status.status-open {
+    background: #d4edda;
+    color: #155724;
+}
+
+.bkm-status.status-closed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Action Status Styles */
+.status-open {
+    background-color: #e3f2fd !important;
+    color: #1565c0 !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}
+
+.status-active, .status-progress {
+    background-color: #fff3e0 !important;
+    color: #ef6c00 !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}
+
+.status-completed {
+    background-color: #e8f5e8 !important;
+    color: #2e7d32 !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}
+
+/* ===========================================
+   TASKS SECTION
+   =========================================== */
+.bkm-tasks-row td {
+    background: #f8f9fa;
+    border-top: none;
+    padding: 0;
+}
+
+.bkm-tasks-container {
+    padding: 20px;
+    background: #fff;
+}
+
+.bkm-tasks-container h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #2c3e50;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.bkm-tasks-list {
+    display: grid;
+    gap: 15px;
+}
+
+.bkm-task-item {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.bkm-task-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.bkm-task-item.completed {
+    background: #e8f5e8;
+    border-color: #28a745;
+    opacity: 0.9;
+}
+
+.bkm-task-item.completed::after {
+    content: '✓ TAMAMLANDI';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4);
+}
+
+/* Görev içerik alanı iyileştirmeleri */
+.bkm-task-content {
+    flex: 1;
+    margin-right: 20px;
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.bkm-task-content p {
+    margin: 0 0 12px 0;
+    color: #2c3e50;
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.bkm-task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.bkm-task-meta span {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    border: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.bkm-task-meta span:hover {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-color: #90caf9;
+    color: #1565c0;
+    transform: translateY(-1px);
+}
+
+/* Progress bar iyileştirmeleri */
+.bkm-task-progress {
+    background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+    border-radius: 25px;
+    height: 24px;
+    overflow: hidden;
+    min-width: 150px;
+    border: 1px solid #e0e0e0;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.bkm-task-progress .bkm-progress-bar {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 50%, #17a2b8 100%);
+    height: 100%;
+    border-radius: 25px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.bkm-task-progress .bkm-progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    z-index: 2;
+}
+
+/* Görev aksiyonları iyileştirmeleri */
+.bkm-task-actions {
+    margin-left: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+}
+
+/* ===========================================
+   NOTLAR BÖLÜMÜ İYİLEŞTİRMELERİ
+   =========================================== */
+
+/* Not ekleme formu iyileştirmeleri */
+.bkm-note-form {
+    display: none; /* Initially hidden, controlled by JavaScript */
+    background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+    border: 2px solid #90caf9;
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 15px;
+    box-shadow: 0 4px 15px rgba(144, 202, 249, 0.2);
+    animation: noteFormSlideDown 0.3s ease-out;
+    grid-column: 1 / -1;
+}
+
+@keyframes noteFormSlideDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+        max-height: 0;
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 300px;
+    }
+}
+
+.bkm-note-form textarea {
+    width: 100%;
+    min-height: 100px;
+    max-height: 200px;
+    padding: 15px;
+    border: 2px solid #e3f2fd;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    background: linear-gradient(135deg, #ffffff 0%, #f3e5f5 100%);
+    color: #2c3e50;
+    font-weight: 500;
+    resize: vertical;
+    transition: all 0.3s ease;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.bkm-note-form textarea:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.2);
+    background: linear-gradient(135deg, #ffffff 0%, #e8eaf6 100%);
+    transform: translateY(-1px);
+}
+
+.bkm-note-form textarea::placeholder {
+    color: #9e9e9e;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+.bkm-note-form .bkm-form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+.bkm-note-form .bkm-btn {
+    border-radius: 20px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+    padding: 10px 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Notlar gösterim alanı iyileştirmeleri */
+.bkm-notes-section {
+    display: none; /* Initially hidden, controlled by JavaScript */
+    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    border: 1px solid #e0e0e0;
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 15px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+    animation: notesSlideDown 0.3s ease-out;
+    grid-column: 1 / -1;
+}
+
+@keyframes notesSlideDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+        max-height: 0;
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 500px;
+    }
+}
+
+.bkm-notes-section h5 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 16px;
+    font-weight: 700;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e9ecef;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bkm-notes-section .bkm-note-item {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.bkm-notes-section .bkm-note-item:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+    border-color: #90caf9;
+}
+
+.bkm-notes-section .bkm-note-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.bkm-notes-section .bkm-note-author {
+    font-weight: 700;
+    color: #1976d2;
+    font-size: 13px;
+}
+
+.bkm-notes-section .bkm-note-date {
+    font-size: 11px;
+    color: #6c757d;
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-family: monospace;
+}
+
+.bkm-notes-section .bkm-note-content {
+    color: #2c3e50;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Boş not durumu iyileştirmesi */
+.bkm-notes-section p:only-child {
+    text-align: center;
+    color: #9e9e9e;
+    font-style: italic;
+    margin: 20px 0;
+    padding: 30px;
+    border: 2px dashed #e0e0e0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
+}
+
+/* ===========================================
+   AKSIYON FORMU STİLLERİ  
+   =========================================== */
+#bkm-action-form {
+    background: linear-gradient(135deg, #6c7ce7 0%, #a29bfe 100%);
+    border: 2px solid #74b9ff;
+    border-radius: 15px;
+    padding: 25px;
+    margin: 20px 0;
+    box-shadow: 0 8px 25px rgba(116, 185, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+#bkm-action-form::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    pointer-events: none;
+}
+
+#bkm-action-form h3 {
+    color: white;
+    text-align: center;
+    margin-bottom: 20px;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#bkm-action-form .bkm-field label {
+    color: white;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+#bkm-action-form .bkm-field input,
+#bkm-action-form .bkm-field select,
+#bkm-action-form .bkm-field textarea {
+    background: rgba(255,255,255,0.95);
+    border: 2px solid rgba(255,255,255,0.8);
+    transition: all 0.3s ease;
+}
+
+#bkm-action-form .bkm-field input:focus,
+#bkm-action-form .bkm-field select:focus,
+#bkm-action-form .bkm-field textarea:focus {
+    background: white;
+    border-color: #00b894;
+    box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.2);
+    transform: translateY(-1px);
+}
+
+#bkm-action-form .bkm-btn {
+    background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
+}
+
+#bkm-action-form .bkm-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 184, 148, 0.4);
+    background: linear-gradient(135deg, #00a085 0%, #00b894 100%);
+}
+
+/* ===========================================
+   AKSIYON DETAYLARI İYİLEŞTİRMELERİ
+   =========================================== */
+.bkm-action-details-row {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 10px 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.bkm-action-details-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+.bkm-action-detail-section {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 4px solid #6c7ce7;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.bkm-action-detail-section h4 {
+    color: #2c3e50;
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bkm-action-detail-section p {
+    margin: 5px 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Kompakt progress bar için */
+.bkm-action-details-row .bkm-progress {
+    max-width: 200px;
+    height: 16px;
+}
+
+.bkm-action-details-row .bkm-progress-text {
+    font-size: 10px;
+}
+
+/* Responsive düzenleme */
+@media (max-width: 768px) {
+    .bkm-action-details-content {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .bkm-action-detail-section {
+        padding: 12px;
+    }
+    
+    .bkm-task-item {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .bkm-task-content {
+        margin-right: 0;
+    }
+    
+    .bkm-task-actions {
+        margin-left: 0;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+    
+    .bkm-task-meta {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .bkm-note-form .bkm-form-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .bkm-note-form .bkm-btn {
+        width: 100%;
+    }
+}
+
+/* Not butonları için stil */
+.bkm-note-actions {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #e9ecef;
+}
+
+/* ===========================================
+   HİYERARŞİK NOT TASARIMI
+   =========================================== */
+
+/* Ana notlar */
+.bkm-main-note {
+    position: relative;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 2px solid #e3f2fd;
+    border-left: 5px solid #2196f3;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.1);
+    transition: all 0.3s ease;
+}
+
+.bkm-main-note:hover {
+    border-left-color: #1976d2;
+    box-shadow: 0 6px 20px rgba(33, 150, 243, 0.15);
+    transform: translateY(-1px);
+}
+
+.bkm-main-note .bkm-note-indicator {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.bkm-main-note .bkm-note-content-wrapper {
+    padding: 15px;
+}
+
+/* Cevap notları */
+.bkm-reply-note {
+    position: relative;
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    border: 2px solid #ffb74d;
+    border-left: 4px solid #ff9800;
+    border-radius: 10px;
+    margin: 10px 0 10px 40px;
+    box-shadow: 0 3px 8px rgba(255, 152, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.bkm-reply-note:hover {
+    border-left-color: #f57c00;
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.15);
+}
+
+.bkm-reply-note .bkm-note-content-wrapper {
+    padding: 12px;
+}
+
+/* Bağlantı çizgisi */
+.bkm-reply-connector {
+    position: absolute;
+    left: -40px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, #ff9800 0%, rgba(255, 152, 0, 0.3) 100%);
+}
+
+.bkm-reply-connector::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: -8px;
+    width: 20px;
+    height: 2px;
+    background: #ff9800;
+}
+
+/* Ok işareti */
+.bkm-reply-arrow {
+    position: absolute;
+    left: -35px;
+    top: 15px;
+    color: #ff9800;
+    font-size: 16px;
+    font-weight: bold;
+    background: white;
+    padding: 2px;
+    border-radius: 50%;
+    border: 1px solid #ff9800;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
+}
+
+/* Cevap badge */
+.bkm-reply-badge {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    color: white;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+    box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
+}
+
+/* Not meta bilgileri güncellemesi */
+.bkm-main-note .bkm-note-meta {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(33, 150, 243, 0.1);
+}
+
+.bkm-reply-note .bkm-note-meta {
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 152, 0, 0.1);
+}
+
+/* Not içeriği */
+.bkm-main-note .bkm-note-content {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.bkm-reply-note .bkm-note-content {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #5d4037;
+    margin-bottom: 0;
+}
+
+/* Yazar ve tarih */
+.bkm-main-note .bkm-note-author {
+    color: #1976d2;
+    font-weight: 600;
+}
+
+.bkm-reply-note .bkm-note-author {
+    color: #f57c00;
+    font-weight: 600;
+}
+
+.bkm-main-note .bkm-note-date {
+    color: #666;
+    font-size: 12px;
+}
+
+.bkm-reply-note .bkm-note-date {
+    color: #8d6e63;
+    font-size: 11px;
+}
+
+/* Responsive düzenleme */
+@media (max-width: 768px) {
+    .bkm-reply-note {
+        margin-left: 20px;
+    }
+    
+    .bkm-reply-connector {
+        left: -20px;
+    }
+    
+    .bkm-reply-arrow {
+        left: -18px;
+        width: 20px;
+        height: 20px;
+        font-size: 14px;
+    }
+    
+    .bkm-reply-connector::before {
+        width: 12px;
+        left: -6px;
+    }
+}
+
+/* ===========================================
+   NOT HIGHLIGHT ANIMASYONLARI
+   =========================================== */
+
+/* Yeni not ekleme sonrası highlight animasyonu */
+.new-note-highlight {
+    animation: notePulse 2s ease-in-out;
+    position: relative;
+    z-index: 5;
+}
+
+@keyframes notePulse {
+    0% {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+    }
+    25% {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        transform: scale(1.02);
+        box-shadow: 0 0 0 8px rgba(251, 191, 36, 0.3);
+    }
+    50% {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        transform: scale(1.03);
+        box-shadow: 0 0 0 12px rgba(251, 191, 36, 0.1);
+    }
+    75% {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        transform: scale(1.01);
+        box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.2);
+    }
+    100% {
+        background: transparent;
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+    }
+}
+
+/* Yeni not ekleme fade-in animasyonu */
+.bkm-main-note.new-note-highlight,
+.bkm-reply-note.new-note-highlight {
+    animation: noteSlideIn 0.5s ease-out, notePulse 2s ease-in-out 0.3s;
+}
+
+@keyframes noteSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Loading state animasyonu */
+.bkm-note-form.loading,
+.bkm-reply-form.loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+}
+
+.bkm-note-form.loading::after,
+.bkm-reply-form.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+}
+
+/* Smooth transitions for note sections */
+.bkm-notes-section {
+    transition: all 0.3s ease;
+}
+
+.bkm-notes-section[style*="display: none"] {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.bkm-notes-section:not([style*="display: none"]) {
+    opacity: 1;
+    max-height: none;
+}
+
+/* Success notification improvement */
+.bkm-notification.success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    font-weight: 500;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.bkm-notification.error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    font-weight: 500;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ===========================================
+   KOMPAKT AKSİYON DETAYLARI DÜZENİ
+   =========================================== */
+
+/* Ana aksiyon detayları konteyneri */
+.bkm-action-details-container {
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 12px;
+}
+
+.bkm-action-details-container h4 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+/* Üst grid: Genel Bilgiler ve Tarih Bilgileri yan yana */
+.bkm-details-grid-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* Alt grid: Sorumlu Kişiler, Tespit Konusu ve Açıklama yan yana */
+.bkm-details-grid-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* Her detay bölümü için stil */
+.bkm-detail-section {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.bkm-detail-section:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.bkm-detail-section h5 {
+    margin: 0 0 12px 0;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+/* Detay elemanları */
+.bkm-detail-item {
+    margin-bottom: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.bkm-detail-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.bkm-detail-item strong {
+    color: #495057;
+    font-weight: 600;
+    font-size: 13px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.bkm-detail-item span:not(.bkm-progress-text) {
+    color: #2c3e50;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+/* İçerik alanları için (Tespit Konusu ve Açıklama) */
+.bkm-detail-content {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #495057;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+/* Badge'lar için kompakt stil */
+.bkm-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.bkm-badge-category {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    color: #1976d2;
+    border: 1px solid #90caf9;
+}
+
+.bkm-badge-performance {
+    background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+    color: #388e3c;
+    border: 1px solid #81c784;
+}
+
+.bkm-badge-user {
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    color: #f57c00;
+    border: 1px solid #ffb74d;
+    margin: 2px;
+}
+
+/* Sorumlu kişiler konteyneri */
+.bkm-responsible-users {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+/* Tarih bilgileri için stil */
+.bkm-date {
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #495057;
+    border: 1px solid #e9ecef;
+}
+
+/* Progress bar kompakt düzeni */
+.bkm-detail-section .bkm-progress {
+    width: 100%;
+    height: 16px;
+    border-radius: 8px;
+    margin-top: 5px;
+}
+
+.bkm-detail-section .bkm-progress-text {
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* Detayları kapat butonu */
+.bkm-details-actions {
+    text-align: center;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+    margin-top: 15px;
+}
+
+/* Responsive tasarım */
+@media (max-width: 992px) {
+    .bkm-details-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .bkm-management-list {
+        max-height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .bkm-management-panel {
+        padding: 20px;
+        margin: 15px 0;
+    }
+    
+    .bkm-management-form,
+    .bkm-management-list {
+        padding: 15px;
+    }
+    
+    .bkm-item {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .bkm-item-content {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .bkm-item-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 576px) {
+    .bkm-action-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .bkm-action-buttons .bkm-btn {
+        width: 100%;
+    }
+    
+    .bkm-management-panel h3 {
+        font-size: 18px;
+    }
+    
+    .bkm-item-actions {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .bkm-item-actions .bkm-btn {
+        width: 100%;
+    }
+}
+
+/* Loading durumu için */
+.bkm-management-panel.loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+}
+
+.bkm-management-panel.loading::after {
+    content: 'İşlem yapılıyor...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255,255,255,0.95);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    z-index: 100;
+    color: #0277bd;
+    font-weight: 600;
+}
+
+/* ===========================================
+   SETTINGS PANEL - SEKMELİ YAPISI
+   =========================================== */
+
+.bkm-settings-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 0;
+    margin: 20px 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    overflow: hidden;
+}
+
+.bkm-settings-header {
+    background: rgba(255,255,255,0.1);
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.bkm-settings-header h3 {
+    color: white;
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+/* Settings Tabs */
+.bkm-settings-tabs {
+    background: rgba(255,255,255,0.05);
+    padding: 0;
+    display: flex;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.settings-tab {
+    background: none;
+    border: none;
+    padding: 10px 18px;
+    color: rgba(255,255,255,0.7);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    flex: 1;
+    border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+.settings-tab:last-child {
+    border-right: none;
+}
+
+.settings-tab:hover {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.9);
+}
+
+.settings-tab.active {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+
+.settings-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: white;
+}
+
+/* Tab Content */
+.bkm-settings-tab-content {
+    background: white;
+    padding: 20px;
+    display: none;
+    min-height: 400px;
+}
+
+.bkm-settings-tab-content.active {
+    display: block;
+}
+
+/* User specific styles */
+.bkm-user-email {
+    color: #0277bd;
+    font-size: 13px;
+}
+
+.bkm-user-role {
+    color: #2e7d32;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.bkm-user-registered {
+    color: #6c757d;
+    font-size: 13px;
+}
+
+/* Form grid for user form */
+.bkm-user-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* ===========================================
+   AYARLAR SAYFASI ÖZELLEŞTİRMELERİ
+   =========================================== */
+
+/* Settings page body styling */
+.bkm-settings-page {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Settings header styling */
+.bkm-settings-page .bkm-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+}
+
+.bkm-settings-page .bkm-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.bkm-settings-page .bkm-header-left h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.bkm-settings-page .bkm-header-left p {
+    margin: 5px 0 0 0;
+    color: rgba(255,255,255,0.9);
+    font-size: 16px;
+}
+
+.bkm-settings-page .bkm-header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.bkm-settings-page .bkm-user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.9);
+}
+
+.bkm-settings-page .bkm-logout-link {
+    color: rgba(255,255,255,0.9);
+    text-decoration: none;
+    padding: 8px 15px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.bkm-settings-page .bkm-logout-link:hover {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    text-decoration: none;
+}
+
+/* Settings container */
+.bkm-settings-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 30px;
+}
+
+/* Settings tabs styling for dedicated page */
+.bkm-settings-container .bkm-settings-tabs {
+    background: white;
+    border-radius: 15px 15px 0 0;
+    padding: 0;
+    display: flex;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 0;
+}
+
+.bkm-settings-container .settings-tab {
+    background: none;
+    border: none;
+    padding: 16px 25px;
+    color: #6c757d;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    flex: 1;
+    border-right: 1px solid #e9ecef;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bkm-settings-container .settings-tab:last-child {
+    border-right: none;
+    border-radius: 0 15px 0 0;
+}
+
+.bkm-settings-container .settings-tab:first-child {
+    border-radius: 15px 0 0 0;
+}
+
+.bkm-settings-container .settings-tab:hover {
+    background: #f8f9fa;
+    color: #495057;
+}
+
+.bkm-settings-container .settings-tab.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.bkm-settings-container .settings-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: white;
+}
+
+/* Tab content styling for dedicated page - Kompakt versiyon */
+.bkm-settings-container .bkm-settings-tab-content {
+    background: white;
+    padding: 18px;
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    min-height: 380px;
+    display: none;
+}
+
+.bkm-settings-container .bkm-settings-tab-content.active {
+    display: block;
+    animation: settingsSlideIn 0.4s ease-out;
+}
+
+@keyframes settingsSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* MODERN ESTETİK FORM TASARIMI - V5 ULTRA SİK */
+
+/* Management grid enhanced for settings page - Modern görünüm */
+.bkm-settings-container .bkm-management-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    height: 100%;
+}
+
+.bkm-settings-container .bkm-management-form {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    padding: 25px;
+    border-radius: 16px;
+    border: 1px solid #e1e8f0;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+    box-shadow: 
+        0 4px 20px rgba(0,0,0,0.08),
+        0 1px 3px rgba(0,0,0,0.05);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.bkm-settings-container .bkm-management-form:hover {
+    box-shadow: 
+        0 8px 30px rgba(0,0,0,0.12),
+        0 2px 6px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.bkm-settings-container .bkm-management-form h4 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    padding: 18px 25px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    margin: -25px -25px 20px -25px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.bkm-settings-container .bkm-management-form h4::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.bkm-settings-container .bkm-management-list {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e1e8f0;
+    border-radius: 16px;
+    padding: 25px;
+    max-height: 600px;
+    overflow-y: auto;
+    box-shadow: 
+        0 4px 20px rgba(0,0,0,0.08),
+        0 1px 3px rgba(0,0,0,0.05);
+    backdrop-filter: blur(10px);
+}
+
+.bkm-settings-container .bkm-management-list h4 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    padding: 18px 25px;
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    border-radius: 12px;
+    margin: -25px -25px 20px -25px;
+    box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.bkm-settings-container .bkm-management-list h4::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: shimmer 2s infinite;
+}
+
+/* Enhanced form styling for settings page - Ultra modern */
+.bkm-settings-container .bkm-field {
+    margin-bottom: 18px;
+    position: relative;
+}
+
+.bkm-settings-container .bkm-field label {
+    display: block;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+    position: relative;
+}
+
+.bkm-settings-container .bkm-field label .required {
+    color: #e74c3c;
+    font-weight: 700;
+    margin-left: 3px;
+}
+
+.bkm-settings-container .bkm-field input,
+.bkm-settings-container .bkm-field textarea,
+.bkm-settings-container .bkm-field select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e1e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    box-shadow: 
+        0 2px 8px rgba(0,0,0,0.04),
+        inset 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.bkm-settings-container .bkm-field input:focus,
+.bkm-settings-container .bkm-field textarea:focus,
+.bkm-settings-container .bkm-field select:focus {
+    outline: none;
+    border-color: #667eea;
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+    box-shadow: 
+        0 0 0 4px rgba(102, 126, 234, 0.15),
+        0 4px 20px rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Ultra modern item styling */
+.bkm-settings-container .bkm-item {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e1e8f0;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        0 2px 8px rgba(0,0,0,0.05),
+        0 1px 3px rgba(0,0,0,0.03);
+    position: relative;
+    overflow: hidden;
+}
+
+.bkm-settings-container .bkm-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.bkm-settings-container .bkm-item:hover {
+    box-shadow: 
+        0 12px 35px rgba(0,0,0,0.1),
+        0 4px 15px rgba(102, 126, 234, 0.15);
+    transform: translateY(-4px);
+    border-color: #667eea;
+}
+
+.bkm-settings-container .bkm-item:hover::before {
+    opacity: 1;
+}
+
+.bkm-settings-container .bkm-item-content {
+    flex: 1;
+    margin-right: 20px;
+}
+
+.bkm-settings-container .bkm-item-content strong {
+    color: #2c3e50;
+    font-size: 16px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+}
+
+.bkm-settings-container .bkm-item-content p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+/* ULTRA MODERN BUTTON DESIGN - Premium Look */
+.bkm-settings-container .bkm-btn {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-transform: none;
+    letter-spacing: 0.4px;
+    font-size: 12px;
+    padding: 10px 16px !important;
+    min-height: auto !important;
+    white-space: nowrap;
+    border: none;
+    box-shadow: 
+        0 2px 8px rgba(0,0,0,0.1),
+        0 1px 3px rgba(0,0,0,0.06);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.bkm-settings-container .bkm-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.bkm-settings-container .bkm-btn:hover::before {
+    left: 100%;
+}
+
+.bkm-settings-container .bkm-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 
+        0 8px 25px rgba(0,0,0,0.15),
+        0 4px 12px rgba(0,0,0,0.1);
+}
+
+.bkm-settings-container .bkm-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 
+        0 4px 15px rgba(0,0,0,0.2),
+        0 2px 6px rgba(0,0,0,0.1);
+}
+
+.bkm-settings-container .bkm-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.bkm-settings-container .bkm-btn-primary:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    box-shadow: 
+        0 8px 25px rgba(102, 126, 234, 0.4),
+        0 4px 12px rgba(118, 75, 162, 0.3);
+}
+
+.bkm-settings-container .bkm-btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+}
+
+.bkm-settings-container .bkm-btn-secondary:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #343a40 100%);
+    box-shadow: 
+        0 8px 25px rgba(108, 117, 125, 0.4),
+        0 4px 12px rgba(73, 80, 87, 0.3);
+}
+
+.bkm-settings-container .bkm-btn-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+}
+
+.bkm-settings-container .bkm-btn-info:hover {
+    background: linear-gradient(135deg, #148aa3 0%, #117a8b 100%);
+    box-shadow: 
+        0 8px 25px rgba(23, 162, 184, 0.4),
+        0 4px 12px rgba(19, 132, 150, 0.3);
+}
+
+.bkm-settings-container .bkm-btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.bkm-settings-container .bkm-btn-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+    box-shadow: 
+        0 8px 25px rgba(220, 53, 69, 0.4),
+        0 4px 12px rgba(200, 35, 51, 0.3);
+}
+
+.bkm-settings-container .bkm-btn-small {
+    font-size: 11px;
+    padding: 8px 14px;
+}
+
+/* Custom scrollbar dashboard ayarlar paneli için */
+.bkm-management-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.bkm-management-list::-webkit-scrollbar-track {
+    background: #f1f3f4;
+    border-radius: 3px;
+}
+
+.bkm-management-list::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 3px;
+}
+
+.bkm-management-list::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+/* Responsive design for modern aesthetics */
+@media (max-width: 768px) {
+    .bkm-settings-container .bkm-management-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .bkm-settings-container .bkm-management-form,
+    .bkm-settings-container .bkm-management-list {
+        padding: 20px;
+    }
+    
+    .bkm-settings-container .bkm-item {
+        padding: 15px;
+    }
+    
+    .bkm-settings-container .bkm-item-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .bkm-settings-container .bkm-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Enhanced notification animations */
+.bkm-notification {
+    animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+    0% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Form focus indicators */
+.bkm-settings-container .bkm-field.focused {
+    position: relative;
+}
+
+.bkm-settings-container .bkm-field.focused::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    animation: expandWidth 0.3s ease-out;
+}
+
+@keyframes expandWidth {
+    0% { width: 0; }
+    100% { width: 100%; }
+}
+
+/* Glass morphism effect for modern look */
+.bkm-settings-container .bkm-management-form,
+.bkm-settings-container .bkm-management-list {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* Success/Error state indicators */
+.bkm-settings-container .bkm-field.success input,
+.bkm-settings-container .bkm-field.success textarea {
+    border-color: #28a745;
+    box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1);
+}
+
+.bkm-settings-container .bkm-field.error input,
+.bkm-settings-container .bkm-field.error textarea {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.1);
+}
+
+/* ===== COMPANY SETTINGS ULTRA MODERN STYLES ===== */
+
+/* Company Form Container */
+.bkm-company-form {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    border-radius: 20px !important;
+    color: white !important;
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.bkm-company-form::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent) !important;
+    animation: companyShimmer 3s infinite !important;
+}
+
+@keyframes companyShimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.bkm-company-form h4 {
+    color: white !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+    font-size: 24px !important;
+    margin-bottom: 25px !important;
+    text-align: center !important;
+}
+
+/* Logo Upload Area */
+.bkm-logo-upload-area {
+    background: rgba(255,255,255,0.1) !important;
+    border: 2px dashed rgba(255,255,255,0.3) !important;
+    border-radius: 15px !important;
+    padding: 20px !important;
+    text-align: center !important;
+    transition: all 0.3s ease !important;
+    margin: 15px 0 !important;
+}
+
+.bkm-logo-upload-area:hover {
+    border-color: rgba(255,255,255,0.6) !important;
+    background: rgba(255,255,255,0.15) !important;
+    transform: translateY(-2px) !important;
+}
+
+.bkm-file-input {
+    background: linear-gradient(135deg, #ff6b6b, #ff8e8e) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    margin-bottom: 15px !important;
+    width: 100% !important;
+}
+
+.bkm-file-input:hover {
+    background: linear-gradient(135deg, #ff5252, #ff7979) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4) !important;
+}
+
+.bkm-file-input:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.3) !important;
+}
+
+/* Logo Preview İyileştirmeleri */
+.bkm-logo-preview {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.bkm-logo-preview img {
+    display: block !important;
+    margin: 0 auto !important;
+    border: 2px solid rgba(255,255,255,0.2) !important;
+}
+
+.bkm-file-info {
+    margin-top: 10px !important;
+}
+
+.bkm-file-info small {
+    color: rgba(255,255,255,0.6) !important;
+    font-size: 12px !important;
+    display: block !important;
+    text-align: center !important;
+}
+
+/* Company Info Display */
+.bkm-company-logo-display {
+    margin-right: 15px !important;
+    flex-shrink: 0 !important;
+}
+
+.bkm-company-logo-display img {
+    width: 80px !important;
+    height: 60px !important;
+    object-fit: contain !important;
+    border-radius: 10px !important;
+    background: rgba(255,255,255,0.1) !important;
+    padding: 4px !important;
+}
+
+.bkm-company-header {
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: 15px !important;
+}
+
+.bkm-company-header h5 {
+    margin: 0 !important;
+    color: #fff !important;
+    text-shadow: 0 2px 8px rgba(44,62,80,0.18) !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+}
+
+.bkm-company-details p {
+    margin: 6px 0 !important;
+    color: #e0e6f6 !important;
+    font-size: 15px !important;
+}
+
+.bkm-no-company-info {
+    text-align: center !important;
+    color: rgba(255,255,255,0.6) !important;
+    padding: 20px !important;
+}
+
+.bkm-no-company-info em {
+    font-style: italic !important;
+    display: block !important;
+    margin-bottom: 10px !important;
+}
+
+/* Company Form Fields Override */
+.bkm-company-form .bkm-field label {
+    color: white !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+}
+
+.bkm-company-form .bkm-field input,
+.bkm-company-form .bkm-field textarea {
+    background: rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    color: white !important;
+    border-radius: 10px !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.bkm-company-form .bkm-field input::placeholder,
+.bkm-company-form .bkm-field textarea::placeholder {
+    color: rgba(255,255,255,0.7) !important;
+}
+
+.bkm-company-form .bkm-field input:focus,
+.bkm-company-form .bkm-field textarea:focus {
+    background: rgba(255,255,255,0.2) !important;
+    border-color: rgba(255,255,255,0.6) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.2) !important;
+}
+
+.bkm-company-form .required {
+    color: #ffeb3b !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+}
+
+/* Company Form Buttons */
+.bkm-company-form .bkm-form-actions .bkm-btn {
+    background: linear-gradient(135deg, #4CAF50, #45a049) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    color: white !important;
+    padding: 12px 25px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3) !important;
+}
+
+.bkm-company-form .bkm-form-actions .bkm-btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4) !important;
+    background: linear-gradient(135deg, #45a049, #4CAF50) !important;
+}
+
+.bkm-company-form .bkm-form-actions .bkm-btn-secondary {
+    background: linear-gradient(135deg, #9E9E9E, #757575) !important;
+    box-shadow: 0 4px 15px rgba(158, 158, 158, 0.3) !important;
+}
+
+.bkm-company-form .bkm-form-actions .bkm-btn-secondary:hover {
+    background: linear-gradient(135deg, #757575, #9E9E9E) !important;
+    box-shadow: 0 8px 25px rgba(158, 158, 158, 0.4) !important;
+}
+
+/* Responsive Design for Company Settings */
+@media (max-width: 768px) {
+    .bkm-company-header {
+        flex-direction: column !important;
+        text-align: center !important;
+    }
+    
+    .bkm-company-logo-display {
+        margin-right: 0 !important;
+        margin-bottom: 15px !important;
+    }
+    
+    .bkm-company-header h5 {
+        font-size: 24px !important;
+    }
+    
+    .bkm-logo-preview img {
+        max-width: 120px !important;
+        max-height: 80px !important;
+    }
+}
+
+/* Loading Animation for Company Form */
+.bkm-company-form.loading {
+    position: relative !important;
+    pointer-events: none !important;
+}
+
+.bkm-company-form.loading::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(255,255,255,0.1) !important;
+    border-radius: 20px !important;
+}
+
+.bkm-company-form.loading .bkm-form-actions::before {
+    content: '⏳ Kaydediliyor...' !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    color: white !important;
+    font-weight: 600 !important;
+    z-index: 10 !important;
+}
+
+/* ===========================================
+   DYNAMIC TASK FORM STYLES - YENİ AKSİYONLAR İÇİN
+   =========================================== */
+
+/* Task Form within Tasks Container */
+.bkm-tasks-container .bkm-task-form {
+    background: #f8f9fa !important;
+    border: 2px solid #e9ecef !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    margin-top: 15px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+.bkm-tasks-container .bkm-task-form h5 {
+    color: #2c3e50 !important;
+    margin-bottom: 15px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    border-bottom: 2px solid #3498db !important;
+    padding-bottom: 8px !important;
+}
+
+/* Task Form Grid Layout */
+.bkm-task-form .bkm-form-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 15px !important;
+    margin-bottom: 15px !important;
+}
+
+/* Task Form Full Width Row */
+.bkm-task-form .bkm-form-row:first-child {
+    grid-template-columns: 1fr !important;
+}
+
+.bkm-task-form .bkm-form-group {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.bkm-task-form .bkm-form-group label {
+    color: #34495e !important;
+    font-weight: 600 !important;
+    margin-bottom: 5px !important;
+    font-size: 14px !important;
+}
+
+.bkm-task-form .bkm-form-group textarea,
+.bkm-task-form .bkm-form-group input[type="date"],
+.bkm-task-form .bkm-form-group select {
+    padding: 10px 12px !important;
+    border: 2px solid #e9ecef !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    transition: all 0.3s ease !important;
+    background: white !important;
+}
+
+.bkm-task-form .bkm-form-group textarea:focus,
+.bkm-task-form .bkm-form-group input[type="date"]:focus,
+.bkm-task-form .bkm-form-group select:focus {
+    outline: none !important;
+    border-color: #3498db !important;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1) !important;
+}
+
+.bkm-task-form .bkm-form-group textarea {
+    resize: vertical !important;
+    min-height: 80px !important;
+}
+
+/* Task Form Actions */
+.bkm-task-form .bkm-form-actions {
+    display: flex !important;
+    gap: 10px !important;
+    justify-content: flex-end !important;
+    padding-top: 15px !important;
+    border-top: 1px solid #e9ecef !important;
+    margin-top: 15px !important;
+}
+
+/* Add Task Section Styling */
+.bkm-add-task-section {
+    margin-top: 15px !important;
+    padding-top: 15px !important;
+    border-top: 1px solid #e9ecef !important;
+}
+
+/* Loading State for Task Forms */
+.bkm-task-form.loading {
+    opacity: 0.7 !important;
+    pointer-events: none;
+}
+
+.bkm-task-form.loading .bkm-form-actions button[type="submit"] {
+    background: #6c757d !important;
+    cursor: not-allowed !important;
+}
+
+/* New Task Highlight Animation */
+.new-task-highlight {
+    animation: highlightNewTask 3s ease-in-out !important;
+}
+
+@keyframes highlightNewTask {
+    0% { background-color: rgba(40, 167, 69, 0.2) !important; }
+    50% { background-color: rgba(40, 167, 69, 0.4) !important; }
+    100% { background-color: transparent !important; }
+}
+
+/* Responsive Design for Task Forms */
+@media (max-width: 768px) {
+    .bkm-task-form .bkm-form-row {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .bkm-task-form .bkm-form-actions {
+        flex-direction: column !important;
+    }
+    
+    .bkm-tasks-container .bkm-task-form {
+        padding: 15px !important;
+    }
+}
+
+/* ===========================================
+   ROL TABANLI GÜVENLİK KURALLARI - FIXED VERSION
+   =========================================== */
+
+/* SADECE Admin olmayan TÜM kullanıcılar için butonları gizle */
+body:not(.user-administrator) .admin-only-button,
+body:not(.user-administrator) .bkm-btn-danger,
+body:not(.user-administrator) button[onclick*="editUser"],
+body:not(.user-administrator) button[onclick*="deleteUser"],
+body:not(.user-administrator) button[onclick*="edit"],
+body:not(.user-administrator) button[onclick*="delete"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+/* SADECE Administrator rolü için butonları AÇIKÇA göster */
+body.user-administrator .admin-only-button,
+body.user-administrator .bkm-btn-danger {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    height: auto !important;
+    width: auto !important;
+    margin: revert !important;
+    padding: revert !important;
+    border: revert !important;
+}
+
+/* Genel admin-only sınıfı için default durum */
+.admin-only-button {
+    transition: opacity 0.3s ease !important;
+}
+
+/* Editor kullanıcıları için uyarı mesajları daha belirgin */
+.editor-only-message {
+    background: #fff3cd !important;
+    border: 1px solid #ffeaa7 !important;
+    color: #856404 !important;
+    padding: 10px !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+}
+
+/* Responsive güvenlik kuralları - SADECE yönetici olmayanlar için */
+@media (max-width: 768px) {
+    body:not(.user-administrator) .admin-only-button {
+        display: none !important;
+    }
+}
+
+/* ===========================================
+   ACTION PROGRESS UPDATE ANIMATIONS
+   =========================================== */
+.progress-updated {
+    background: linear-gradient(90deg, #28a745, #20c997) !important;
+    box-shadow: 0 0 15px rgba(40, 167, 69, 0.5) !important;
+    transition: all 0.3s ease !important;
+}
+
+.action-completed {
+    background: linear-gradient(135deg, #d4f4dd 0%, #e8f5e8 100%) !important;
+    border-left: 4px solid #28a745 !important;
+    animation: completedActionGlow 1s ease-out !important;
+}
+
+@keyframes completedActionGlow {
+    0% {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+    }
+    50% {
+        transform: translateY(0);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.6);
+    }
+    100% {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+    }
+}
+
+/* Action progress highlight animation */
+.bkm-action-progress-highlight {
+    border: 2px solid #28a745 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+/* Progress bar update animation */
+.bkm-progress-bar.progress-updated {
+    background: linear-gradient(90deg, #28a745 0%, #20c997 50%, #17a2b8 100%) !important;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4) !important;
+    transition: all 0.5s ease !important;
+}
+
+/* Completion badge */
+.completion-badge {
+    position: absolute !important;
+    top: -5px !important;
+    right: -10px !important;
+    background: #28a745 !important;
+    color: white !important;
+    font-size: 10px !important;
+    font-weight: bold !important;
+    padding: 2px 6px !important;
+    border-radius: 12px !important;
+    animation: completionPulse 1s ease-in-out infinite alternate !important;
+    z-index: 10 !important;
+}
+
+@keyframes completionPulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* Progress container positioning for badges */
+.bkm-progress {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+/* Enhanced progress bar transitions */
+.bkm-progress-bar {
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Action row highlighting when progress changes */
+tr.action-progress-updated {
+    background: linear-gradient(90deg, rgba(40, 167, 69, 0.1) 0%, transparent 100%) !important;
+    transition: background 0.5s ease !important;
+}
+
+/* Pulse animation for significant progress changes */
+.significant-progress-change {
+    animation: progressPulse 0.6s ease-in-out !important;
+}
+
+@keyframes progressPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3); }
+    100% { transform: scale(1); }
+}
+
+/* Firma Bilgileri Özeti Teması - Tatlı Açık Pembe Gradient */
+.bkm-management-list {
+    background: linear-gradient(135deg, #f8bbd9 0%, #f48fb1 100%) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 8px 32px rgba(244, 143, 177, 0.3) !important;
+    padding: 28px 24px !important;
+    margin: 24px 0 !important;
+    color: #fff !important;
+    border: none !important;
+    position: relative !important;
+}
+
+.bkm-management-list h4 {
+    color: #fff !important;
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    margin-bottom: 20px !important;
+    text-shadow: 0 2px 8px rgba(244, 143, 177, 0.4) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.bkm-company-info {
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+.bkm-company-details p {
+    color: rgba(255, 255, 255, 0.95) !important;
+    font-size: 15px !important;
+    margin: 8px 0 !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    line-height: 1.6 !important;
+}
+
+.bkm-company-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 20px !important;
+    margin-bottom: 20px !important;
+}
+
+.bkm-company-header h5 {
+    color: #fff !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    text-shadow: 0 2px 8px rgba(244, 143, 177, 0.4) !important;
+}
+
+.bkm-company-logo-display {
+    flex-shrink: 0 !important;
+}
+
+.bkm-company-logo-display img {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    padding: 8px !important;
+    max-width: 80px !important;
+    max-height: 60px !important;
+    object-fit: contain !important;
+}
+
+.bkm-no-company-info {
+    color: rgba(255, 255, 255, 0.9) !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    margin-top: 10px !important;
+    text-align: center !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+}
