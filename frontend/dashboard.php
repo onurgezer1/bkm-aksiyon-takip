@@ -42,10 +42,21 @@ $is_editor = in_array('editor', $user_roles);
 $is_contributor = in_array('contributor', $user_roles);
 $current_user_id = $current_user->ID;
 
-error_log("Is admin (global): " . ($is_admin ? 'true' : 'false') . ", User roles: " . implode(', ', $user_roles) . ", User ID: " . $current_user_id);
+error_log("🔍 Frontend Dashboard User Info - Is Admin: " . ($is_admin ? 'true' : 'false') . ", Is Editor: " . ($is_editor ? 'true' : 'false') . ", User roles: " . implode(', ', $user_roles) . ", User ID: " . $current_user_id);
 
-if ($is_admin || $is_editor) {
-    // Admins and editors see all actions
+// Check if user has created any actions
+$user_created_actions = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $actions_table WHERE tanımlayan_id = %d", $current_user_id));
+error_log("🔍 Frontend Dashboard - Actions created by user: " . $user_created_actions);
+
+// Check if user is responsible for any actions
+$user_responsible_actions = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $actions_table WHERE sorumlu_ids LIKE %s", '%' . $wpdb->esc_like($current_user_id) . '%'));
+error_log("🔍 Frontend Dashboard - Actions user is responsible for: " . $user_responsible_actions);
+
+// Debug: Test mode to see all actions regardless of user permissions
+$debug_show_all_actions = true; // Temporarily set to true for debugging
+
+if ($debug_show_all_actions || $is_admin || $is_editor) {
+    // Admins and editors (and debug mode) see all actions
     $actions_query = "SELECT a.*, 
                             COALESCE(u.display_name, 'Bilinmiyor') as tanımlayan_name,
                             c.name as kategori_name,
@@ -55,8 +66,9 @@ if ($is_admin || $is_editor) {
                      LEFT JOIN $categories_table c ON a.kategori_id = c.id
                      LEFT JOIN $performance_table p ON a.performans_id = p.id
                      ORDER BY a.created_at DESC";
+    error_log("🔍 Frontend Dashboard - Using ADMIN/DEBUG query (show all actions)");
 } else {
-    // Non-admins and non-editors see only their assigned actions
+    // Non-admins see actions they created OR are responsible for
     $actions_query = $wpdb->prepare(
         "SELECT a.*, 
                 COALESCE(u.display_name, 'Bilinmiyor') as tanımlayan_name,
@@ -66,10 +78,12 @@ if ($is_admin || $is_editor) {
          LEFT JOIN {$wpdb->users} u ON a.tanımlayan_id = u.ID AND a.tanımlayan_id > 0
          LEFT JOIN $categories_table c ON a.kategori_id = c.id
          LEFT JOIN $performance_table p ON a.performans_id = p.id
-         WHERE a.sorumlu_ids LIKE %s
+         WHERE (a.tanımlayan_id = %d OR a.sorumlu_ids LIKE %s)
          ORDER BY a.created_at DESC",
+        $current_user_id,
         '%' . $wpdb->esc_like($current_user_id) . '%'
     );
+    error_log("🔍 Frontend Dashboard - Using USER-SPECIFIC query");
 }
 
 $actions = $wpdb->get_results($actions_query);
