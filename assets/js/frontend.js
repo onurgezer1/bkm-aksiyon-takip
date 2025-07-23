@@ -2837,22 +2837,6 @@ window.toggleReplyForm = function(taskId, noteId) {
             success: function(response) {
                 console.log('✅ Actions refresh başarılı:', response);
                 
-                // TEMPORARY DEBUG: Show AJAX response in UI
-                if (typeof bkmFrontend !== 'undefined' && bkmFrontend.debug_mode) {
-                    var debugHtml = '<div class="bkm-debug-ajax" style="background: #e7f3ff; border: 1px solid #b3d9ff; padding: 15px; margin: 20px 0; border-radius: 5px; font-family: monospace; font-size: 12px;">';
-                    debugHtml += '<h4 style="margin: 0 0 10px 0; color: #004085;">🔄 AJAX DEBUG (Yenile Butonu)</h4>';
-                    debugHtml += '<div><strong>Yanıt Durumu:</strong> ' + (response.success ? 'BAŞARILI' : 'HATA') + '</div>';
-                    debugHtml += '<div><strong>Bulunan Aksiyon Sayısı:</strong> ' + (response.data ? response.data.length : '0') + '</div>';
-                    if (response.data && response.data.length > 0) {
-                        debugHtml += '<div><strong>İlk Aksiyon ID:</strong> ' + response.data[0].id + ' - Tanımlayan: ' + response.data[0].tanımlayan_id + '</div>';
-                    }
-                    debugHtml += '</div>';
-                    
-                    // Remove old debug info and add new one
-                    $('.bkm-debug-ajax').remove();
-                    $('.bkm-debug-info').after(debugHtml);
-                }
-                
                 if (response && response.success && response.data) {
                     updateActionsTable(response.data);
                     updateActionDropdown(response.data); // Görev ekleme formundaki dropdown'ı da güncelle
@@ -3064,9 +3048,9 @@ window.toggleReplyForm = function(taskId, noteId) {
             detailsRow.append('<td colspan="9"><div class="bkm-action-details-container">Detaylar yükleniyor...</div></td>');
             tbody.append(detailsRow);
             
-            // Tasks row ekle (dashboard.php'de olduğu gibi) - şimdilik boş
+            // Tasks row ekle (dashboard.php'de olduğu gibi) - boş container
             var tasksRow = $('<tr id="tasks-' + action.id + '" class="bkm-tasks-row" style="display: none;">');
-            tasksRow.append('<td colspan="9"><div class="bkm-tasks-container">Görevler yükleniyor...</div></td>');
+            tasksRow.append('<td colspan="9"><div class="bkm-tasks-container"><h4>Görevler</h4><p>Görevler yükleniyor...</p></div></td>');
             tbody.append(tasksRow);
         });
         
