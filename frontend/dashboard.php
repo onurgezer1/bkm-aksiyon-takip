@@ -815,6 +815,9 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                     <button class="bkm-btn bkm-btn-info" onclick="toggleFilterPanel()">
                         🔍 Filtrele
                     </button>
+                    <button class="bkm-btn bkm-btn-secondary" onclick="refreshActions()" title="Aksiyon listesini yenile">
+                        🔄 Yenile
+                    </button>
                     <?php if ($is_admin || $is_editor): ?>
                         <button class="bkm-btn bkm-btn-success" onclick="toggleActionForm()">
                             ➕ Yeni Aksiyon

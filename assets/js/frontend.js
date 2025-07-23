@@ -771,17 +771,55 @@ jQuery(document).ready(function($) {
                     }
                     // Aksiyon listesini yenile (sayfa reload yerine)
                     showNotification('Aksiyon başarıyla eklendi, liste güncelleniyor...', 'success');
-                    if (typeof refreshActions === 'function') {
-                        // Kısa bir gecikme ekleyerek database sync bekleyelim
-                        setTimeout(function() {
+                    
+                    // Daha uzun gecikme ekleyerek database sync emin olalım
+                    var refreshWithRetry = function(attempt) {
+                        attempt = attempt || 1;
+                        console.log('🔄 Refresh denemesi:', attempt);
+                        
+                        if (typeof refreshActions === 'function') {
                             refreshActions();
-                        }, 500);
-                    } else {
-                        // Fallback olarak sayfa yenile
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 1500);
-                    }
+                        } else {
+                            console.warn('⚠️ refreshActions fonksiyonu bulunamadı, alternatif deneniyor...');
+                            
+                            // Alternative: direct AJAX call
+                            $.ajax({
+                                url: bkmFrontend.ajax_url,
+                                type: 'POST',
+                                data: {
+                                    action: 'bkm_get_actions',
+                                    nonce: bkmFrontend.nonce,
+                                    _: new Date().getTime()
+                                },
+                                success: function(response) {
+                                    if (response && response.success && response.data) {
+                                        updateActionsTable(response.data);
+                                        showNotification('Liste güncellendi!', 'success');
+                                    } else {
+                                        // Retry or fallback to page reload
+                                        if (attempt < 3) {
+                                            setTimeout(function() { refreshWithRetry(attempt + 1); }, 1000);
+                                        } else {
+                                            showNotification('Liste güncellenemedi, sayfa yenileniyor...', 'warning');
+                                            setTimeout(function() { window.location.reload(); }, 2000);
+                                        }
+                                    }
+                                },
+                                error: function() {
+                                    if (attempt < 3) {
+                                        setTimeout(function() { refreshWithRetry(attempt + 1); }, 1000);
+                                    } else {
+                                        setTimeout(function() { window.location.reload(); }, 2000);
+                                    }
+                                }
+                            });
+                        }
+                    };
+                    
+                    // Kısa gecikme ile başlat
+                    setTimeout(function() {
+                        refreshWithRetry(1);
+                    }, 1000);
                 } else {
                     var errorMessage = 'Aksiyon eklenirken hata oluştu.';
                     if (response && response.data) {
@@ -2798,12 +2836,23 @@ window.toggleReplyForm = function(taskId, noteId) {
             },
             success: function(response) {
                 console.log('✅ Actions refresh başarılı:', response);
-                if (response.success && response.data) {
+                if (response && response.success && response.data) {
                     updateActionsTable(response.data);
-                    showNotification('Aksiyon listesi güncellendi', 'success');
+                    showNotification('Aksiyon listesi güncellendi (' + response.data.length + ' aksiyon)', 'success');
                 } else {
-                    console.error('Aksiyon listesi yenilenemedi:', response.data);
-                    showNotification('Aksiyon listesi yenilenemedi', 'error');
+                    console.error('❌ Aksiyon listesi yenilenemedi:', response);
+                    showNotification('Aksiyon listesi yenilenemedi - yanıt formatı hatalı', 'error');
+                    
+                    // Debug için response'u tam göster
+                    if (typeof response === 'object') {
+                        console.log('📋 Response detayı:', JSON.stringify(response, null, 2));
+                    }
+                    
+                    // Fallback: sayfa yenile
+                    setTimeout(function() {
+                        console.log('🔄 Fallback: sayfa yenileniyor...');
+                        window.location.reload();
+                    }, 3000);
                 }
             },
             error: function(xhr, status, error) {
