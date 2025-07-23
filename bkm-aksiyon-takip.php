@@ -626,6 +626,37 @@ private function create_database_tables() {
         
         // Update tanımlayan_id column to allow NULL and set default
         $this->update_tanimlayan_id_column();
+        
+        // Add performance indexes
+        $this->add_performance_indexes();
+    }
+    
+    /**
+     * Add performance indexes to improve query speed
+     */
+    private function add_performance_indexes() {
+        global $wpdb;
+        
+        $actions_table = $wpdb->prefix . 'bkm_actions';
+        $tasks_table = $wpdb->prefix . 'bkm_tasks';
+        $notes_table = $wpdb->prefix . 'bkm_task_notes';
+        
+        // Add indexes for frequently queried columns
+        $indexes = array(
+            "ALTER TABLE $actions_table ADD INDEX idx_status_created (status, created_at)",
+            "ALTER TABLE $actions_table ADD INDEX idx_tanimlayan_status (tanımlayan_id, status)",
+            "ALTER TABLE $tasks_table ADD INDEX idx_sorumlu_status (sorumlu_id, status)",
+            "ALTER TABLE $tasks_table ADD INDEX idx_status_created (status, created_at)",
+            "ALTER TABLE $notes_table ADD INDEX idx_user_created (user_id, created_at)"
+        );
+        
+        foreach ($indexes as $index_sql) {
+            // Check if index already exists before creating
+            $wpdb->query($index_sql);
+            // Ignore errors for existing indexes
+        }
+        
+        bkm_debug_log("✅ Performance indexes added/updated");
     }
     
     /**
@@ -777,6 +808,15 @@ private function create_database_tables() {
             'manage_options',
             'bkm-user-activities',
             array($this, 'admin_page_user_activities')
+        );
+        
+        add_submenu_page(
+            'bkm-aksiyon-takip',
+            'Sistem Durumu',
+            'Sistem Durumu',
+            'manage_options',
+            'bkm-system-status',
+            array($this, 'admin_page_system_status')
         );
     }
     
@@ -1237,6 +1277,109 @@ private function create_database_tables() {
     }
     
     /**
+     * System status admin page
+     */
+    public function admin_page_system_status() {
+        global $wpdb;
+        
+        echo '<div class="wrap">';
+        echo '<h1>BKM Sistem Durumu</h1>';
+        
+        // Database Tables Status
+        echo '<div class="card" style="margin: 20px 0; padding: 20px;">';
+        echo '<h2>📊 Veritabanı Tabloları</h2>';
+        
+        $required_tables = array(
+            'bkm_actions' => 'Aksiyonlar',
+            'bkm_categories' => 'Kategoriler',
+            'bkm_performances' => 'Performanslar',
+            'bkm_tasks' => 'Görevler',
+            'bkm_task_notes' => 'Görev Notları',
+            'bkm_user_activities_logs' => 'Kullanıcı Aktiviteleri',
+            'bkm_task_note_replies' => 'Not Cevapları'
+        );
+        
+        echo '<table class="wp-list-table widefat fixed striped">';
+        echo '<thead><tr><th>Tablo</th><th>Durum</th><th>Kayıt Sayısı</th></tr></thead><tbody>';
+        
+        foreach ($required_tables as $table_suffix => $table_name) {
+            $full_table_name = $wpdb->prefix . $table_suffix;
+            $exists = $wpdb->get_var("SHOW TABLES LIKE '$full_table_name'") === $full_table_name;
+            $count = $exists ? $wpdb->get_var("SELECT COUNT(*) FROM $full_table_name") : 0;
+            $status = $exists ? '<span style="color: green;">✅ Mevcut</span>' : '<span style="color: red;">❌ Eksik</span>';
+            
+            echo "<tr><td>$table_name</td><td>$status</td><td>$count</td></tr>";
+        }
+        
+        echo '</tbody></table>';
+        echo '</div>';
+        
+        // Data Integrity Checks
+        echo '<div class="card" style="margin: 20px 0; padding: 20px;">';
+        echo '<h2>🔍 Veri Bütünlüğü Kontrolleri</h2>';
+        
+        $actions_table = $wpdb->prefix . 'bkm_actions';
+        $tasks_table = $wpdb->prefix . 'bkm_tasks';
+        
+        // Check for NULL/0 tanımlayan_id values
+        $null_tanimlayan = $wpdb->get_var("SELECT COUNT(*) FROM $actions_table WHERE tanımlayan_id IS NULL OR tanımlayan_id = 0");
+        
+        // Check for orphaned tasks
+        $orphaned_tasks = $wpdb->get_var("
+            SELECT COUNT(*) FROM $tasks_table t 
+            LEFT JOIN $actions_table a ON t.action_id = a.id 
+            WHERE a.id IS NULL
+        ");
+        
+        echo '<table class="wp-list-table widefat fixed striped">';
+        echo '<thead><tr><th>Kontrol</th><th>Durum</th><th>Detay</th></tr></thead><tbody>';
+        
+        $null_status = $null_tanimlayan == 0 ? '<span style="color: green;">✅ Temiz</span>' : '<span style="color: orange;">⚠️ Dikkat</span>';
+        echo "<tr><td>NULL Tanımlayan ID'leri</td><td>$null_status</td><td>$null_tanimlayan kayıt</td></tr>";
+        
+        $orphaned_status = $orphaned_tasks == 0 ? '<span style="color: green;">✅ Temiz</span>' : '<span style="color: red;">❌ Problem</span>';
+        echo "<tr><td>Öksüz Görevler</td><td>$orphaned_status</td><td>$orphaned_tasks kayıt</td></tr>";
+        
+        echo '</tbody></table>';
+        echo '</div>';
+        
+        // Plugin Information
+        echo '<div class="card" style="margin: 20px 0; padding: 20px;">';
+        echo '<h2>ℹ️ Plugin Bilgileri</h2>';
+        echo '<table class="wp-list-table widefat fixed striped">';
+        echo '<thead><tr><th>Özellik</th><th>Değer</th></tr></thead><tbody>';
+        
+        echo '<tr><td>Plugin Versiyon</td><td>' . BKM_AKSIYON_TAKIP_VERSION . '</td></tr>';
+        echo '<tr><td>WordPress Versiyon</td><td>' . get_bloginfo('version') . '</td></tr>';
+        echo '<tr><td>PHP Versiyon</td><td>' . PHP_VERSION . '</td></tr>';
+        echo '<tr><td>MySQL Versiyon</td><td>' . $wpdb->db_version() . '</td></tr>';
+        echo '<tr><td>Debug Modu</td><td>' . (defined('WP_DEBUG') && WP_DEBUG ? '✅ Aktif' : '❌ Deaktif') . '</td></tr>';
+        
+        echo '</tbody></table>';
+        echo '</div>';
+        
+        // Quick Actions
+        echo '<div class="card" style="margin: 20px 0; padding: 20px;">';
+        echo '<h2>⚡ Hızlı İşlemler</h2>';
+        echo '<button type="button" class="button button-secondary" onclick="if(confirm(\'Tanımlayan ID\'lerini düzeltmek istediğinizden emin misiniz?\')) { window.location.href=\'' . admin_url('admin.php?page=bkm-system-status&fix_tanimlayan=1') . '\'; }">Tanımlayan ID\'lerini Düzelt</button>';
+        echo '<button type="button" class="button button-secondary" onclick="if(confirm(\'Tabloları yeniden oluşturmak istediğinizden emin misiniz?\')) { window.location.href=\'' . admin_url('admin.php?page=bkm-system-status&recreate_tables=1') . '\'; }">Tabloları Yeniden Oluştur</button>';
+        echo '</div>';
+        
+        // Handle quick actions
+        if (isset($_GET['fix_tanimlayan']) && $_GET['fix_tanimlayan'] == '1') {
+            $this->fix_tanimlayan_id_values();
+            echo '<div class="notice notice-success"><p>Tanımlayan ID\'leri düzeltildi!</p></div>';
+        }
+        
+        if (isset($_GET['recreate_tables']) && $_GET['recreate_tables'] == '1') {
+            $this->check_and_create_tables();
+            echo '<div class="notice notice-success"><p>Tablolar kontrol edildi ve güncellendi!</p></div>';
+        }
+        
+        echo '</div>';
+    }
+    
+    /**
      * Log user login activity
      */
     public function log_user_login($user_login, $user) {
@@ -1493,39 +1636,46 @@ public function send_email_notification($type, $data) {
         case 'action_created':
         case 'action_updated':
         case 'action_completed': {
-            // Aksiyon detaylarını çek
-            $action = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}bkm_actions WHERE id = %d", $data['id']));
-            $kategori = $action ? $wpdb->get_var($wpdb->prepare("SELECT name FROM {$wpdb->prefix}bkm_categories WHERE id = %d", $action->kategori_id)) : '';
-            $tanımlayan = $action ? get_user_by('ID', $action->tanımlayan_id) : null;
-            $sorumlu_ids = $action ? explode(',', $action->sorumlu_ids) : array();
+            // Aksiyon detaylarını tek sorgu ile çek (optimized with JOIN)
+            $action_data = $wpdb->get_row($wpdb->prepare("
+                SELECT a.*, c.name as kategori_name, p.name as performans_name
+                FROM {$wpdb->prefix}bkm_actions a
+                LEFT JOIN {$wpdb->prefix}bkm_categories c ON a.kategori_id = c.id
+                LEFT JOIN {$wpdb->prefix}bkm_performances p ON a.performans_id = p.id
+                WHERE a.id = %d
+            ", $data['id']));
+            
+            if (!$action_data) {
+                error_log("❌ Action not found for ID: " . $data['id']);
+                return false;
+            }
+            
+            $tanımlayan = get_user_by('ID', $action_data->tanımlayan_id);
+            $sorumlu_ids = explode(',', $action_data->sorumlu_ids);
             $sorumlu_names = array();
             foreach ($sorumlu_ids as $sid) {
                 $u = get_user_by('ID', trim($sid));
                 if ($u) $sorumlu_names[] = $u->display_name;
             }
+            
             // Önem derecesi label'ı
             $priority_labels = array(1 => 'Düşük', 2 => 'Orta', 3 => 'Yüksek', 4 => 'Kritik');
-            $onem_label = isset($priority_labels[$action->onem_derecesi]) ? $priority_labels[$action->onem_derecesi] : $action->onem_derecesi;
-            // Performans adı
-            $performans_name = '';
-            if (!empty($action->performans_id)) {
-                $performans_row = $wpdb->get_row($wpdb->prepare("SELECT name FROM {$wpdb->prefix}bkm_performances WHERE id = %d", $action->performans_id));
-                if ($performans_row) $performans_name = $performans_row->name;
-            }
+            $onem_label = isset($priority_labels[$action_data->onem_derecesi]) ? $priority_labels[$action_data->onem_derecesi] : $action_data->onem_derecesi;
+            
             $content_html = '<h3 style="color:#0073aa;">Aksiyon Detayları</h3>'
                 .'<table style="width:100%;border-collapse:collapse;margin-bottom:24px;">'
-                .'<tr><td style="padding:8px 0;font-weight:bold;width:160px;">Aksiyon ID:</td><td style="padding:8px 0;">' . esc_html($action->id) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Başlık:</td><td style="padding:8px 0;">' . esc_html($action->tespit_konusu) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Açıklama:</td><td style="padding:8px 0;">' . nl2br(esc_html($action->aciklama)) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Kategori:</td><td style="padding:8px 0;">' . esc_html($kategori) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;width:160px;">Aksiyon ID:</td><td style="padding:8px 0;">' . esc_html($action_data->id) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Başlık:</td><td style="padding:8px 0;">' . esc_html($action_data->tespit_konusu) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Açıklama:</td><td style="padding:8px 0;">' . nl2br(esc_html($action_data->aciklama)) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Kategori:</td><td style="padding:8px 0;">' . esc_html($action_data->kategori_name ?: 'Belirtilmemiş') . '</td></tr>'
                 .'<tr><td style="padding:8px 0;font-weight:bold;">Tanımlayan:</td><td style="padding:8px 0;">' . ($tanımlayan ? esc_html($tanımlayan->display_name) : '-') . '</td></tr>'
                 .'<tr><td style="padding:8px 0;font-weight:bold;">Sorumlular:</td><td style="padding:8px 0;">' . implode(', ', $sorumlu_names) . '</td></tr>'
                 .'<tr><td style="padding:8px 0;font-weight:bold;">Önem Derecesi:</td><td style="padding:8px 0;">' . esc_html($onem_label) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Performans:</td><td style="padding:8px 0;">' . esc_html($performans_name) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Açılma Tarihi:</td><td style="padding:8px 0;">' . esc_html($action->acilma_tarihi) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Hedef Tarih:</td><td style="padding:8px 0;">' . esc_html($action->hedef_tarih) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Kapanma Tarihi:</td><td style="padding:8px 0;">' . esc_html($action->kapanma_tarihi) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">İlerleme Durumu:</td><td style="padding:8px 0;">' . esc_html($action->ilerleme_durumu) . '%</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Performans:</td><td style="padding:8px 0;">' . esc_html($action_data->performans_name ?: 'Belirtilmemiş') . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Açılma Tarihi:</td><td style="padding:8px 0;">' . esc_html($action_data->acilma_tarihi) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Hedef Tarih:</td><td style="padding:8px 0;">' . esc_html($action_data->hedef_tarih) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Kapanma Tarihi:</td><td style="padding:8px 0;">' . esc_html($action_data->kapanma_tarihi) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">İlerleme Durumu:</td><td style="padding:8px 0;">' . esc_html($action_data->ilerleme_durumu) . '%</td></tr>'
                 .'</table>';
             $subject = sprintf('[%s] Aksiyon: %s', $site_name, $type === 'action_created' ? 'Oluşturuldu' : ($type === 'action_updated' ? 'Güncellendi' : 'Tamamlandı'));
             break;
@@ -1533,38 +1683,60 @@ public function send_email_notification($type, $data) {
         case 'task_created':
         case 'task_updated':
         case 'task_completed': {
-            $task = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}bkm_tasks WHERE id = %d", $data['task_id'] ?? 0));
-            $action = $task ? $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}bkm_actions WHERE id = %d", $task->action_id)) : null;
-            $kategori = $action ? $wpdb->get_var($wpdb->prepare("SELECT name FROM {$wpdb->prefix}bkm_categories WHERE id = %d", $action->kategori_id)) : '';
-            $sorumlu = $task ? get_user_by('ID', $task->sorumlu_id) : null;
+            // Optimize task and action data retrieval with single JOIN query
+            $task_data = $wpdb->get_row($wpdb->prepare("
+                SELECT t.*, a.tespit_konusu as action_title, c.name as kategori_name
+                FROM {$wpdb->prefix}bkm_tasks t
+                LEFT JOIN {$wpdb->prefix}bkm_actions a ON t.action_id = a.id
+                LEFT JOIN {$wpdb->prefix}bkm_categories c ON a.kategori_id = c.id
+                WHERE t.id = %d
+            ", $data['task_id'] ?? 0));
+            
+            if (!$task_data) {
+                error_log("❌ Task not found for ID: " . ($data['task_id'] ?? 0));
+                return false;
+            }
+            
+            $sorumlu = get_user_by('ID', $task_data->sorumlu_id);
             $content_html = '<h3 style="color:#0073aa;">Görev Detayları</h3>'
                 .'<table style="width:100%;border-collapse:collapse;margin-bottom:24px;">'
-                .'<tr><td style="padding:8px 0;font-weight:bold;width:160px;">Görev ID:</td><td style="padding:8px 0;">' . esc_html($task->id) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">İçerik:</td><td style="padding:8px 0;">' . esc_html($task->content) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Açıklama:</td><td style="padding:8px 0;">' . nl2br(esc_html($task->description)) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;width:160px;">Görev ID:</td><td style="padding:8px 0;">' . esc_html($task_data->id) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">İçerik:</td><td style="padding:8px 0;">' . esc_html($task_data->content) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Açıklama:</td><td style="padding:8px 0;">' . nl2br(esc_html($task_data->description)) . '</td></tr>'
                 .'<tr><td style="padding:8px 0;font-weight:bold;">Sorumlu:</td><td style="padding:8px 0;">' . ($sorumlu ? esc_html($sorumlu->display_name) : '-') . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Başlangıç Tarihi:</td><td style="padding:8px 0;">' . esc_html($task->baslangic_tarihi) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Hedef Tarih:</td><td style="padding:8px 0;">' . esc_html($task->hedef_bitis_tarihi) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">İlerleme:</td><td style="padding:8px 0;">' . esc_html($task->ilerleme_durumu) . '%</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Aksiyon:</td><td style="padding:8px 0;">' . ($action ? esc_html($action->tespit_konusu) : '-') . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Kategori:</td><td style="padding:8px 0;">' . esc_html($kategori) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Başlangıç Tarihi:</td><td style="padding:8px 0;">' . esc_html($task_data->baslangic_tarihi) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Hedef Tarih:</td><td style="padding:8px 0;">' . esc_html($task_data->hedef_bitis_tarihi) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">İlerleme:</td><td style="padding:8px 0;">' . esc_html($task_data->ilerleme_durumu) . '%</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Aksiyon:</td><td style="padding:8px 0;">' . esc_html($task_data->action_title ?: 'Belirtilmemiş') . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Kategori:</td><td style="padding:8px 0;">' . esc_html($task_data->kategori_name ?: 'Belirtilmemiş') . '</td></tr>'
                 .'</table>';
             $subject = sprintf('[%s] Görev: %s', $site_name, $type === 'task_created' ? 'Oluşturuldu' : ($type === 'task_updated' ? 'Güncellendi' : 'Tamamlandı'));
             break;
         }
         case 'note_added':
         case 'note_replied': {
-            $task = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}bkm_tasks WHERE id = %d", $data['task_id'] ?? 0));
-            $action = $task ? $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}bkm_actions WHERE id = %d", $task->action_id)) : null;
-            $kategori = $action ? $wpdb->get_var($wpdb->prepare("SELECT name FROM {$wpdb->prefix}bkm_categories WHERE id = %d", $action->kategori_id)) : '';
-            $sorumlu = $task ? get_user_by('ID', $task->sorumlu_id) : null;
+            // Optimize note, task and action data retrieval with single JOIN query
+            $note_data = $wpdb->get_row($wpdb->prepare("
+                SELECT t.*, a.tespit_konusu as action_title, c.name as kategori_name
+                FROM {$wpdb->prefix}bkm_tasks t
+                LEFT JOIN {$wpdb->prefix}bkm_actions a ON t.action_id = a.id
+                LEFT JOIN {$wpdb->prefix}bkm_categories c ON a.kategori_id = c.id
+                WHERE t.id = %d
+            ", $data['task_id'] ?? 0));
+            
+            if (!$note_data) {
+                error_log("❌ Task not found for note, ID: " . ($data['task_id'] ?? 0));
+                return false;
+            }
+            
+            $sorumlu = get_user_by('ID', $note_data->sorumlu_id);
             $content_html = '<h3 style="color:#0073aa;">Not Detayları</h3>'
                 .'<table style="width:100%;border-collapse:collapse;margin-bottom:24px;">'
                 .'<tr><td style="padding:8px 0;font-weight:bold;width:160px;">Not:</td><td style="padding:8px 0;">' . nl2br(esc_html($data['content'])) . '</td></tr>'
                 .'<tr><td style="padding:8px 0;font-weight:bold;">Ekleyen:</td><td style="padding:8px 0;">' . esc_html($data['sorumlu']) . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Görev:</td><td style="padding:8px 0;">' . ($task ? esc_html($task->content) : '-') . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Aksiyon:</td><td style="padding:8px 0;">' . ($action ? esc_html($action->tespit_konusu) : '-') . '</td></tr>'
-                .'<tr><td style="padding:8px 0;font-weight:bold;">Kategori:</td><td style="padding:8px 0;">' . esc_html($kategori) . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Görev:</td><td style="padding:8px 0;">' . esc_html($note_data->content ?: 'Belirtilmemiş') . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Aksiyon:</td><td style="padding:8px 0;">' . esc_html($note_data->action_title ?: 'Belirtilmemiş') . '</td></tr>'
+                .'<tr><td style="padding:8px 0;font-weight:bold;">Kategori:</td><td style="padding:8px 0;">' . esc_html($note_data->kategori_name ?: 'Belirtilmemiş') . '</td></tr>'
                 .'</table>';
             $subject = sprintf('[%s] Not: %s', $site_name, $type === 'note_added' ? 'Eklendi' : 'Cevaplandı');
             break;
