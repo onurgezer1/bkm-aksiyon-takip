@@ -1313,6 +1313,23 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
             
             <!-- Actions Table -->
             <div class="bkm-actions-table">
+                <!-- Debug Info - Remove after fixing -->
+                <div style="background: #fffbee; border: 1px solid #f39c12; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                    <strong>🔍 DEBUG BİLGİLERİ:</strong><br>
+                    - Toplam Actions: <?php echo count($actions); ?><br>
+                    - User ID: <?php echo $current_user_id; ?><br>
+                    - User Roles: <?php echo implode(', ', $user_roles); ?><br>
+                    - Is Admin: <?php echo $is_admin ? 'Yes' : 'No'; ?><br>
+                    - Debug Mode: <?php echo $debug_show_all_actions ? 'ACTIVE' : 'Off'; ?><br>
+                    - Query: <?php echo esc_html(substr($actions_query, 0, 100)); ?>...<br>
+                    <?php if (count($actions) > 0): ?>
+                        - First Action ID: <?php echo $actions[0]->id; ?><br>
+                        - First Action Title: <?php echo esc_html(substr($actions[0]->tespit_konusu ?: $actions[0]->title ?: 'No title', 0, 50)); ?><br>
+                    <?php endif; ?>
+                    <?php if ($wpdb->last_error): ?>
+                        - DB Error: <?php echo esc_html($wpdb->last_error); ?>
+                    <?php endif; ?>
+                </div>
                 <table class="bkm-table">
                     <thead>
                         <tr>

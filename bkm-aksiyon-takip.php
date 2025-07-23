@@ -2045,8 +2045,58 @@ public function ajax_get_performances() {
 public function ajax_get_actions() {
     global $wpdb;
     
-    $table_name = $wpdb->prefix . 'bkm_actions';
-    $actions = $wpdb->get_results("SELECT * FROM $table_name ORDER BY created_at DESC");
+    // Check if user is logged in
+    if (!is_user_logged_in()) {
+        wp_send_json_error('Giriş yapmalısınız.');
+    }
+    
+    $current_user = wp_get_current_user();
+    $current_user_id = $current_user->ID;
+    $user_roles = $current_user->roles;
+    $is_admin = in_array('administrator', $user_roles);
+    $is_editor = in_array('editor', $user_roles);
+    
+    $actions_table = $wpdb->prefix . 'bkm_actions';
+    $categories_table = $wpdb->prefix . 'bkm_categories';
+    $performance_table = $wpdb->prefix . 'bkm_performances';
+    
+    // Debug: Same logic as dashboard.php
+    $debug_show_all_actions = true; // Temporarily set to true for debugging
+    
+    if ($debug_show_all_actions || $is_admin || $is_editor) {
+        // Admins and editors (and debug mode) see all actions
+        $actions_query = "SELECT a.*, 
+                                COALESCE(u.display_name, 'Bilinmiyor') as tanımlayan_name,
+                                c.name as kategori_name,
+                                p.name as performans_name
+                         FROM $actions_table a
+                         LEFT JOIN {$wpdb->users} u ON a.tanımlayan_id = u.ID AND a.tanımlayan_id > 0
+                         LEFT JOIN $categories_table c ON a.kategori_id = c.id
+                         LEFT JOIN $performance_table p ON a.performans_id = p.id
+                         ORDER BY a.created_at DESC";
+        error_log("🔍 AJAX get_actions - Using ADMIN/DEBUG query (show all actions)");
+    } else {
+        // Non-admins see actions they created OR are responsible for
+        $actions_query = $wpdb->prepare(
+            "SELECT a.*, 
+                    COALESCE(u.display_name, 'Bilinmiyor') as tanımlayan_name,
+                    c.name as kategori_name,
+                    p.name as performans_name
+             FROM $actions_table a
+             LEFT JOIN {$wpdb->users} u ON a.tanımlayan_id = u.ID AND a.tanımlayan_id > 0
+             LEFT JOIN $categories_table c ON a.kategori_id = c.id
+             LEFT JOIN $performance_table p ON a.performans_id = p.id
+             WHERE (a.tanımlayan_id = %d OR a.sorumlu_ids LIKE %s)
+             ORDER BY a.created_at DESC",
+            $current_user_id,
+            '%' . $wpdb->esc_like($current_user_id) . '%'
+        );
+        error_log("🔍 AJAX get_actions - Using USER-SPECIFIC query");
+    }
+    
+    $actions = $wpdb->get_results($actions_query);
+    
+    error_log("🔍 AJAX get_actions - User ID: " . $current_user_id . ", Is Admin: " . ($is_admin ? 'Yes' : 'No') . ", Actions Count: " . count($actions));
     
     wp_send_json_success($actions);
 }
@@ -2054,15 +2104,66 @@ public function ajax_get_actions() {
 public function ajax_get_tasks() {
     global $wpdb;
     
+    // Check if user is logged in
+    if (!is_user_logged_in()) {
+        wp_send_json_error('Giriş yapmalısınız.');
+    }
+    
+    $current_user = wp_get_current_user();
+    $current_user_id = $current_user->ID;
+    $user_roles = $current_user->roles;
+    $is_admin = in_array('administrator', $user_roles);
+    $is_editor = in_array('editor', $user_roles);
+    
     $action_id = isset($_POST['action_id']) ? intval($_POST['action_id']) : 0;
     
     $table_name = $wpdb->prefix . 'bkm_tasks';
     
+    // Debug: Same logic as dashboard.php
+    $debug_show_all_tasks = true; // Temporarily set to true for debugging
+    
     if ($action_id > 0) {
-        $tasks = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_name WHERE action_id = %d ORDER BY created_at DESC", $action_id));
+        // If specific action_id is requested, get tasks for that action only
+        if ($debug_show_all_tasks || $is_admin || $is_editor) {
+            // Admin/Editor can see all tasks
+            $tasks = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_name WHERE action_id = %d ORDER BY created_at DESC", $action_id));
+        } else {
+            // Non-admin: Check if they have access to this action first
+            $actions_table = $wpdb->prefix . 'bkm_actions';
+            $action_access = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $actions_table WHERE id = %d AND (tanımlayan_id = %d OR sorumlu_ids LIKE %s)",
+                $action_id,
+                $current_user_id,
+                '%' . $wpdb->esc_like($current_user_id) . '%'
+            ));
+            
+            if ($action_access > 0) {
+                $tasks = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_name WHERE action_id = %d ORDER BY created_at DESC", $action_id));
+            } else {
+                wp_send_json_error('Bu aksiyonun görevlerini görme yetkiniz yok.');
+            }
+        }
     } else {
-        $tasks = $wpdb->get_results("SELECT * FROM $table_name ORDER BY created_at DESC");
+        // Get all tasks (filtered by user permissions)
+        if ($debug_show_all_tasks || $is_admin || $is_editor) {
+            // Admin/Editor can see all tasks
+            $tasks = $wpdb->get_results("SELECT * FROM $table_name ORDER BY created_at DESC");
+        } else {
+            // Non-admin: Only tasks for actions they have access to
+            $actions_table = $wpdb->prefix . 'bkm_actions';
+            $tasks = $wpdb->get_results($wpdb->prepare(
+                "SELECT t.* FROM $table_name t 
+                 INNER JOIN $actions_table a ON t.action_id = a.id 
+                 WHERE (a.tanımlayan_id = %d OR a.sorumlu_ids LIKE %s OR t.sorumlu_id = %d)
+                 ORDER BY t.created_at DESC",
+                $current_user_id,
+                '%' . $wpdb->esc_like($current_user_id) . '%',
+                $current_user_id
+            ));
+        }
     }
+    
+    error_log("🔍 AJAX get_tasks - User ID: " . $current_user_id . ", Action ID: " . $action_id . ", Tasks Count: " . count($tasks));
     
     wp_send_json_success($tasks);
 }
