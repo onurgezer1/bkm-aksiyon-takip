@@ -2791,9 +2791,29 @@ window.toggleReplyForm = function(taskId, noteId) {
             var sorumluCell = '<td>';
             if (action.sorumlu_ids) {
                 var sorumluIds = action.sorumlu_ids.split(',');
+                var sorumluNames = [];
                 sorumluIds.forEach(function(id) {
-                    sorumluCell += '<span class="bkm-user-badge">' + getUserDisplayName(id.trim()) + '</span>';
+                    var name = getUserDisplayName(id.trim());
+                    if (name) {
+                        sorumluNames.push(name);
+                    }
                 });
+                
+                if (sorumluNames.length > 0) {
+                    sorumluCell += '<div class="bkm-responsible-users-elegant">';
+                    sorumluNames.forEach(function(name, index) {
+                        sorumluCell += '<div class="bkm-user-chip">';
+                        sorumluCell += '<span class="bkm-user-avatar">' + name.charAt(0).toUpperCase() + '</span>';
+                        sorumluCell += '<span class="bkm-user-name">' + name + '</span>';
+                        sorumluCell += '</div>';
+                        if (index < sorumluNames.length - 1) {
+                            sorumluCell += '<div class="bkm-user-separator">•</div>';
+                        }
+                    });
+                    sorumluCell += '</div>';
+                } else {
+                    sorumluCell += '-';
+                }
             } else {
                 sorumluCell += '-';
             }
@@ -2811,8 +2831,10 @@ window.toggleReplyForm = function(taskId, noteId) {
             row.append('<td>' + onemBadge + '</td>');
             
             // İlerleme
-            var progressBar = '<div class="bkm-progress-bar" style="width: ' + (action.ilerleyis || 0) + '%"></div>';
-            row.append('<td>' + progressBar + '</td>');
+            var progressWrapper = '<div class="bkm-progress-container" style="background: #e9ecef; border-radius: 10px; height: 20px; width: 100%;">';
+            progressWrapper += '<div class="bkm-progress-bar" style="width: ' + (action.ilerleyis || 0) + '%; height: 100%;"></div>';
+            progressWrapper += '</div>';
+            row.append('<td>' + progressWrapper + '</td>');
             
             // Durum
             var durumBadge = getDurumBadge(action.durum);
@@ -2821,7 +2843,7 @@ window.toggleReplyForm = function(taskId, noteId) {
             // Görevler  
             var gorevBtn = '<button class="bkm-btn bkm-btn-info bkm-btn-sm" onclick="showActionTasks(' + action.id + ')">' +
                           '<i class="fas fa-tasks"></i> Detaylar</button> ' +
-                          '<span class="bkm-task-count">Görevler (0)</span>';
+                          '<span class="bkm-task-count">Görevler (' + (action.task_count || 0) + ')</span>';
             row.append('<td>' + gorevBtn + '</td>');
             
             tbody.append(row);

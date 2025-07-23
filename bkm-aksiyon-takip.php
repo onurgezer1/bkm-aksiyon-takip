@@ -2096,7 +2096,15 @@ public function ajax_get_actions() {
     
     $actions = $wpdb->get_results($actions_query);
     
-
+    // Her action için task count'u ekle
+    $tasks_table = $wpdb->prefix . 'bkm_tasks';
+    foreach ($actions as $action) {
+        $task_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $tasks_table WHERE action_id = %d",
+            $action->id
+        ));
+        $action->task_count = (int)$task_count;
+    }
     
     wp_send_json_success($actions);
 }

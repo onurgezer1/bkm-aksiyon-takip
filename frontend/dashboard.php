@@ -80,14 +80,27 @@ if ($debug_show_all_actions || $is_admin || $is_editor) {
 
 $actions = $wpdb->get_results($actions_query);
 
-// Get all users for JavaScript cache
-$all_users = $wpdb->get_results("SELECT ID, display_name, user_login FROM {$wpdb->users} ORDER BY display_name");
+// Get all users for JavaScript cache  
+$all_users = $wpdb->get_results("
+    SELECT u.ID, u.display_name, u.user_login, 
+           m1.meta_value as first_name, 
+           m2.meta_value as last_name
+    FROM {$wpdb->users} u
+    LEFT JOIN {$wpdb->usermeta} m1 ON u.ID = m1.user_id AND m1.meta_key = 'first_name'
+    LEFT JOIN {$wpdb->usermeta} m2 ON u.ID = m2.user_id AND m2.meta_key = 'last_name'
+    ORDER BY u.display_name
+");
 $users_for_js = array();
 foreach ($all_users as $user) {
+    $full_name = trim($user->first_name . ' ' . $user->last_name);
+    $display_name = !empty($full_name) ? $full_name : $user->display_name;
+    
     $users_for_js[$user->ID] = array(
         'id' => $user->ID,
-        'display_name' => $user->display_name,
-        'user_login' => $user->user_login
+        'display_name' => $display_name,
+        'user_login' => $user->user_login,
+        'first_name' => $user->first_name ?: '',
+        'last_name' => $user->last_name ?: ''
     );
 }
 
