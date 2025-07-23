@@ -28,6 +28,15 @@ define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);
 define('BKM_EMAIL_TEMPLATE_HEADER', '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{subject}</title></head><body style="font-family: Arial, sans-serif; background: #f6f8fa; margin:0; padding:0;"><div style="max-width:600px;margin:40px auto;background:#fff;border-radius:8px;box-shadow:0 2px 8px #e0e0e0;overflow:hidden;"><div style="background:#0073aa;color:#fff;padding:24px 32px 16px 32px;"><h2 style="margin:0;font-size:24px;">BKM Aksiyon Takip</h2></div><div style="padding:32px;">');
 define('BKM_EMAIL_TEMPLATE_FOOTER', '</div><div style="background:#f6f8fa;color:#888;padding:16px 32px;text-align:center;font-size:13px;">Bu e-posta otomatik olarak oluşturulmuştur.<br>BKM Aksiyon Takip Sistemi</div></div></body></html>');
 
+/**
+ * Debug logging function - only logs when WP_DEBUG is enabled
+ */
+function bkm_debug_log($message) {
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log($message);
+    }
+}
+
 function bkm_get_html_email($subject, $content_html) {
     $header = str_replace('{subject}', esc_html($subject), BKM_EMAIL_TEMPLATE_HEADER);
     $footer = BKM_EMAIL_TEMPLATE_FOOTER;
@@ -370,7 +379,7 @@ private function create_database_tables() {
     $actions_table = $wpdb->prefix . 'bkm_actions';
     $actions_sql = "CREATE TABLE $actions_table (
         id mediumint(9) NOT NULL AUTO_INCREMENT,
-        tanımlayan_id bigint(20) UNSIGNED NOT NULL,
+        tanımlayan_id bigint(20) UNSIGNED DEFAULT 1,
         onem_derecesi tinyint(1) NOT NULL DEFAULT 1,
         acilma_tarihi date NOT NULL,
         hafta int(11) NOT NULL,
@@ -609,6 +618,68 @@ private function create_database_tables() {
                     );
                 }
                 error_log("✅ Updated " . count($empty_user_names) . " empty user_name records in $notes_table table with first_name + last_name");
+            }
+        }
+        
+        // Fix NULL or 0 tanımlayan_id values in actions table
+        $this->fix_tanimlayan_id_values();
+        
+        // Update tanımlayan_id column to allow NULL and set default
+        $this->update_tanimlayan_id_column();
+    }
+    
+    /**
+     * Update tanımlayan_id column to allow NULL and set default value
+     */
+    private function update_tanimlayan_id_column() {
+        global $wpdb;
+        
+        $actions_table = $wpdb->prefix . 'bkm_actions';
+        
+        // Check current column definition
+        $column_info = $wpdb->get_row("SHOW COLUMNS FROM $actions_table WHERE Field = 'tanımlayan_id'");
+        
+        if ($column_info && strpos($column_info->Null, 'NO') !== false) {
+            // Column is currently NOT NULL, update it to allow NULL with default
+            $result = $wpdb->query("ALTER TABLE $actions_table MODIFY COLUMN tanımlayan_id bigint(20) UNSIGNED DEFAULT 1");
+            
+            if ($result !== false) {
+                error_log("✅ Updated tanımlayan_id column to allow NULL with default value 1");
+            } else {
+                error_log("❌ Failed to update tanımlayan_id column: " . $wpdb->last_error);
+            }
+        }
+    }
+    
+    /**
+     * Fix NULL or 0 tanımlayan_id values in bkm_actions table
+     */
+    private function fix_tanimlayan_id_values() {
+        global $wpdb;
+        
+        $actions_table = $wpdb->prefix . 'bkm_actions';
+        
+        // Check if there are any problematic records
+        $problematic_count = $wpdb->get_var("
+            SELECT COUNT(*) 
+            FROM $actions_table 
+            WHERE tanımlayan_id IS NULL OR tanımlayan_id = 0 OR tanımlayan_id = ''
+        ");
+        
+        if ($problematic_count > 0) {
+            // Get first admin user as fallback
+            $admin_users = get_users(array('role' => 'administrator', 'number' => 1));
+            $fallback_admin_id = !empty($admin_users) ? $admin_users[0]->ID : 1;
+            
+            // Update all problematic records
+            $affected_rows = $wpdb->query($wpdb->prepare("
+                UPDATE $actions_table 
+                SET tanımlayan_id = %d 
+                WHERE tanımlayan_id IS NULL OR tanımlayan_id = 0 OR tanımlayan_id = ''
+            ", $fallback_admin_id));
+            
+            if ($affected_rows > 0) {
+                error_log("✅ Fixed $affected_rows records with NULL/0 tanımlayan_id values using admin ID: $fallback_admin_id");
             }
         }
     }
@@ -1847,6 +1918,14 @@ public function ajax_add_action() {
         wp_send_json_error('Lütfen tüm zorunlu alanları doldurun.');
     }
     
+    // Validate tanımlayan_id (current user)
+    $tanımlayan_id = get_current_user_id();
+    if ($tanımlayan_id <= 0) {
+        // If no valid user, try to get the first admin user as fallback
+        $admin_users = get_users(array('role' => 'administrator', 'number' => 1));
+        $tanımlayan_id = !empty($admin_users) ? $admin_users[0]->ID : 1;
+    }
+    
     // If sorumlu_ids is array, convert to string
     if (is_array($sorumlu_ids)) {
         $sorumlu_ids = implode(',', array_map('intval', $sorumlu_ids));
@@ -1881,13 +1960,13 @@ public function ajax_add_action() {
             'responsible' => $responsible,
             'sorumlu_ids' => $sorumlu_ids, // Legacy field
             'status' => 'open',
-            'tanımlayan_id' => get_current_user_id(),
+            'tanımlayan_id' => $tanımlayan_id,
             'onem_derecesi' => $onem_derecesi,
             'performans_id' => $performance_id,
             'ilerleme_durumu' => 0,
             'hafta' => date('W'),
             'created_at' => current_time('mysql'),
-            'created_by' => get_current_user_id()
+            'created_by' => $tanımlayan_id
         ),
         array('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%d', '%s', '%d')
     );
@@ -1943,12 +2022,12 @@ public function ajax_add_action() {
 // Task Management Functions
 public function ajax_add_task() {
     // Debug logging
-    error_log('🧪 ajax_add_task çağrıldı. POST verileri: ' . print_r($_POST, true));
+    bkm_debug_log('🧪 ajax_add_task çağrıldı. POST verileri: ' . print_r($_POST, true));
     
-    // Verify nonce - DEBUG MODE: Temporarily disabled for testing
-    // if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
-    //     wp_send_json_error('Güvenlik kontrolü başarısız.');
-    // }
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
+        wp_send_json_error('Güvenlik kontrolü başarısız.');
+    }
     
     global $wpdb;
     
@@ -1956,10 +2035,27 @@ public function ajax_add_task() {
     $action_id = intval($_POST['action_id'] ?? $_POST['aksiyon_id'] ?? 0);
     $content = sanitize_textarea_field($_POST['content'] ?? $_POST['title'] ?? $_POST['aciklama'] ?? $_POST['description'] ?? '');
     $description = sanitize_textarea_field($_POST['description'] ?? $_POST['aciklama'] ?? $_POST['content'] ?? '');
-    $sorumlu_id = intval($_POST['sorumlu_id'] ?? $_POST['responsible_id'] ?? $_POST['responsible'] ?? get_current_user_id());
+    $sorumlu_id = intval($_POST['sorumlu_id'] ?? $_POST['responsible_id'] ?? $_POST['responsible'] ?? 0);
     $baslangic_tarihi = sanitize_text_field($_POST['baslangic_tarihi'] ?? $_POST['start_date'] ?? current_time('Y-m-d'));
     $hedef_bitis_tarihi = sanitize_text_field($_POST['hedef_bitis_tarihi'] ?? $_POST['bitis_tarihi'] ?? $_POST['target_date'] ?? $_POST['hedef_tarih'] ?? '');
     $ilerleme_durumu = intval($_POST['ilerleme_durumu'] ?? $_POST['progress'] ?? 0);
+    
+    // Validate responsible user ID
+    if ($sorumlu_id <= 0) {
+        // Try to get current user, fallback to admin
+        $sorumlu_id = get_current_user_id();
+        if ($sorumlu_id <= 0) {
+            $admin_users = get_users(array('role' => 'administrator', 'number' => 1));
+            $sorumlu_id = !empty($admin_users) ? $admin_users[0]->ID : 1;
+        }
+    }
+    
+    // Validate created_by user ID
+    $created_by = get_current_user_id();
+    if ($created_by <= 0) {
+        $admin_users = get_users(array('role' => 'administrator', 'number' => 1));
+        $created_by = !empty($admin_users) ? $admin_users[0]->ID : 1;
+    }
     
     // Extra field options to handle frontend variations
     if (empty($content)) {
@@ -2024,7 +2120,7 @@ public function ajax_add_task() {
             'ilerleme_durumu' => $ilerleme_durumu, // Legacy field
             'tamamlandi' => 0, // Legacy field
             'created_at' => current_time('mysql'),
-            'created_by' => get_current_user_id()
+            'created_by' => $created_by
         ),
         array('%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%d')
     );
@@ -2222,10 +2318,10 @@ private function update_action_progress_from_tasks($task_id) {
 
 // Note Management Functions
 public function ajax_add_note() {
-    // Verify nonce - DEBUG MODE: Temporarily disabled for testing
-    // if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
-    //     wp_send_json_error('Güvenlik kontrolü başarısız.');
-    // }
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
+        wp_send_json_error('Güvenlik kontrolü başarısız.');
+    }
     
     global $wpdb;
     
@@ -2254,6 +2350,13 @@ public function ajax_add_note() {
         wp_send_json_error('Not içeriği boş olamaz. Lütfen bir metin girin.');
     }
     
+    // Validate user ID
+    $current_user_id = get_current_user_id();
+    if ($current_user_id <= 0) {
+        $admin_users = get_users(array('role' => 'administrator', 'number' => 1));
+        $current_user_id = !empty($admin_users) ? $admin_users[0]->ID : 1;
+    }
+    
     // Progress validation
     if ($progress !== null && ($progress < 0 || $progress > 100)) {
         wp_send_json_error('İlerleme durumu 0-100 arasında olmalıdır.');
@@ -2262,7 +2365,13 @@ public function ajax_add_note() {
     $table_name = $wpdb->prefix . 'bkm_task_notes';
     
     // Insert note with progress if provided
-    $current_user = wp_get_current_user();
+    $current_user = get_user_by('ID', $current_user_id);
+    if (!$current_user) {
+        // Fallback to first admin if user not found
+        $admin_users = get_users(array('role' => 'administrator', 'number' => 1));
+        $current_user = !empty($admin_users) ? $admin_users[0] : (object)array('ID' => 1, 'display_name' => 'System');
+        $current_user_id = $current_user->ID;
+    }
     
     // Get user's first name and last name
     $first_name = get_user_meta($current_user->ID, 'first_name', true);
@@ -2276,7 +2385,7 @@ public function ajax_add_note() {
     
     $note_data = array(
         'task_id' => $task_id,
-        'user_id' => get_current_user_id(),
+        'user_id' => $current_user_id,
         'user_name' => $user_full_name,
         'content' => $content,
         'parent_note_id' => $parent_note_id,
@@ -2392,9 +2501,22 @@ public function ajax_reply_note() {
         wp_send_json_error('Cevap içeriği boş olamaz.');
     }
     
+    // Validate user ID
+    $current_user_id = get_current_user_id();
+    if ($current_user_id <= 0) {
+        $admin_users = get_users(array('role' => 'administrator', 'number' => 1));
+        $current_user_id = !empty($admin_users) ? $admin_users[0]->ID : 1;
+    }
+    
     // Insert reply as a child note
     $table_name = $wpdb->prefix . 'bkm_task_notes';
-    $current_user = wp_get_current_user();
+    $current_user = get_user_by('ID', $current_user_id);
+    if (!$current_user) {
+        // Fallback to first admin if user not found
+        $admin_users = get_users(array('role' => 'administrator', 'number' => 1));
+        $current_user = !empty($admin_users) ? $admin_users[0] : (object)array('ID' => 1, 'display_name' => 'System');
+        $current_user_id = $current_user->ID;
+    }
     
     // Get user's first name and last name
     $first_name = get_user_meta($current_user->ID, 'first_name', true);
@@ -2410,7 +2532,7 @@ public function ajax_reply_note() {
         $table_name,
         array(
             'task_id' => $task_id,
-            'user_id' => get_current_user_id(),
+            'user_id' => $current_user_id,
             'user_name' => $user_full_name,
             'content' => $content,
             'parent_note_id' => $parent_note_id,
