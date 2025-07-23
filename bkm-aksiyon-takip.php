@@ -959,6 +959,7 @@ private function create_database_tables() {
             'is_admin' => current_user_can('administrator'),
             'plugin_version' => BKM_AKSIYON_TAKIP_VERSION,
             'debug' => defined('WP_DEBUG') && WP_DEBUG,
+            'debug_mode' => defined('WP_DEBUG') && WP_DEBUG, // For easier JS access
             'heartbeat_interval' => 60000, // 1 minute
             'session_timeout' => 1800000, // 30 minutes
             'timeout_warning' => 1500000, // 25 minutes
@@ -2060,11 +2061,19 @@ public function ajax_get_actions() {
         wp_send_json_error('Giriş yapmalısınız.');
     }
     
+    // Consistent user role checking function to avoid discrepancies
     $current_user = wp_get_current_user();
     $current_user_id = $current_user->ID;
     $user_roles = $current_user->roles;
-    $is_admin = in_array('administrator', $user_roles);
-    $is_editor = in_array('editor', $user_roles);
+    
+    // Force array if user_roles is not an array
+    if (!is_array($user_roles)) {
+        $user_roles = array();
+    }
+    
+    // More robust role checking
+    $is_admin = in_array('administrator', $user_roles) || current_user_can('manage_options');
+    $is_editor = in_array('editor', $user_roles) || current_user_can('edit_others_posts');
     
     $actions_table = $wpdb->prefix . 'bkm_actions';
     $categories_table = $wpdb->prefix . 'bkm_categories';
@@ -2075,6 +2084,7 @@ public function ajax_get_actions() {
     
     // DEBUG: Log user role and permissions for troubleshooting
     bkm_debug_log('🎯 AJAX get_actions - User ID: ' . $current_user_id . ', Roles: ' . implode(',', $user_roles));
+    bkm_debug_log('🔍 manage_options: ' . (current_user_can('manage_options') ? 'YES' : 'NO') . ', edit_others_posts: ' . (current_user_can('edit_others_posts') ? 'YES' : 'NO'));
     bkm_debug_log('🔍 Admin: ' . ($is_admin ? 'YES' : 'NO') . ', Editor: ' . ($is_editor ? 'YES' : 'NO') . ', Debug Mode: ' . ($debug_show_all_actions ? 'YES' : 'NO'));
     
     if ($debug_show_all_actions || $is_admin || $is_editor) {

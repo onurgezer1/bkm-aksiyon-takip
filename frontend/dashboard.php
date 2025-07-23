@@ -35,10 +35,17 @@ $notes_table = $wpdb->prefix . 'bkm_task_notes';
 $categories_table = $wpdb->prefix . 'bkm_categories';
 $performance_table = $wpdb->prefix . 'bkm_performances';
 
-// Determine SQL query based on user role
+// Determine SQL query based on user role - CONSISTENT WITH AJAX
 $user_roles = $current_user->roles;
-$is_admin = in_array('administrator', $user_roles);
-$is_editor = in_array('editor', $user_roles);
+
+// Force array if user_roles is not an array
+if (!is_array($user_roles)) {
+    $user_roles = array();
+}
+
+// More robust role checking - same as AJAX
+$is_admin = in_array('administrator', $user_roles) || current_user_can('manage_options');
+$is_editor = in_array('editor', $user_roles) || current_user_can('edit_others_posts');
 $is_contributor = in_array('contributor', $user_roles);
 $current_user_id = $current_user->ID;
 
@@ -49,6 +56,7 @@ $debug_show_all_actions = defined('BKM_DEBUG_SHOW_ALL_ACTIONS') && BKM_DEBUG_SHO
 
 // DEBUG: Log user role and permissions for troubleshooting
 bkm_debug_log('🎯 Dashboard sayfa yüklenme - User ID: ' . $current_user_id . ', Roles: ' . implode(',', $user_roles));
+bkm_debug_log('🔍 manage_options: ' . (current_user_can('manage_options') ? 'YES' : 'NO') . ', edit_others_posts: ' . (current_user_can('edit_others_posts') ? 'YES' : 'NO'));
 bkm_debug_log('🔍 Admin: ' . ($is_admin ? 'YES' : 'NO') . ', Editor: ' . ($is_editor ? 'YES' : 'NO') . ', Debug Mode: ' . ($debug_show_all_actions ? 'YES' : 'NO'));
 
 if ($debug_show_all_actions || $is_admin || $is_editor) {
@@ -813,6 +821,25 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                 <a href="?bkm_logout=1" class="bkm-logout">Çıkış</a>
             </div>
         </div>
+        
+        <!-- TEMPORARY DEBUG INFO -->
+        <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+        <div class="bkm-debug-info" style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 5px; font-family: monospace; font-size: 12px;">
+            <h4 style="margin: 0 0 10px 0; color: #856404;">🐛 DEBUG BİLGİLERİ (Sayfa Yüklenme)</h4>
+            <div><strong>Kullanıcı ID:</strong> <?php echo $current_user_id; ?></div>
+            <div><strong>Kullanıcı Rolleri:</strong> <?php echo implode(', ', $user_roles); ?></div>
+            <div><strong>manage_options:</strong> <?php echo current_user_can('manage_options') ? 'EVET' : 'HAYIR'; ?></div>
+            <div><strong>edit_others_posts:</strong> <?php echo current_user_can('edit_others_posts') ? 'EVET' : 'HAYIR'; ?></div>
+            <div><strong>Admin:</strong> <?php echo $is_admin ? 'EVET' : 'HAYIR'; ?></div>
+            <div><strong>Editor:</strong> <?php echo $is_editor ? 'EVET' : 'HAYIR'; ?></div>
+            <div><strong>Debug Show All:</strong> <?php echo $debug_show_all_actions ? 'EVET' : 'HAYIR'; ?></div>
+            <div><strong>Bulunan Aksiyon Sayısı:</strong> <?php echo count($actions); ?></div>
+            <?php if (count($actions) > 0): ?>
+                <div><strong>İlk Aksiyon ID:</strong> <?php echo $actions[0]->id; ?> - Tanımlayan: <?php echo $actions[0]->tanımlayan_id; ?></div>
+            <?php endif; ?>
+            <div><strong>Sorgu Türü:</strong> <?php echo ($debug_show_all_actions || $is_admin || $is_editor) ? 'Admin/Editor (Tüm Aksiyonlar)' : 'Kullanıcı Kısıtlı'; ?></div>
+        </div>
+        <?php endif; ?>
         
         <!-- Actions Table -->
         <div class="bkm-actions-section">
