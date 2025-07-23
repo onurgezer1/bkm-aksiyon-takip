@@ -770,8 +770,12 @@ jQuery(document).ready(function($) {
                         toggleActionForm();
                     }
                     // Aksiyon listesini yenile (sayfa reload yerine)
+                    showNotification('Aksiyon başarıyla eklendi, liste güncelleniyor...', 'success');
                     if (typeof refreshActions === 'function') {
-                        refreshActions();
+                        // Kısa bir gecikme ekleyerek database sync bekleyelim
+                        setTimeout(function() {
+                            refreshActions();
+                        }, 500);
                     } else {
                         // Fallback olarak sayfa yenile
                         setTimeout(function() {
@@ -930,8 +934,11 @@ jQuery(document).ready(function($) {
                         toggleTaskForm();
                     }
                     // Page refresh to show new task
+                    showNotification('Görev başarıyla eklendi, liste güncelleniyor...', 'success');
                     if (typeof refreshActions === 'function') {
-                        refreshActions();
+                        setTimeout(function() {
+                            refreshActions();
+                        }, 500);
                     } else {
                         setTimeout(function() {
                             window.location.reload();
@@ -2741,33 +2748,73 @@ window.toggleReplyForm = function(taskId, noteId) {
     // Global user cache
     var usersCache = {};
 
+    // Simple notification system
+    function showNotification(message, type) {
+        type = type || 'info';
+        console.log('📢 Notification (' + type + '):', message);
+        
+        // Create notification element
+        var notification = $('<div class="bkm-notification bkm-notification-' + type + '">' + message + '</div>');
+        
+        // Add to page
+        if ($('.bkm-notifications').length === 0) {
+            $('body').append('<div class="bkm-notifications"></div>');
+        }
+        
+        $('.bkm-notifications').append(notification);
+        
+        // Auto remove after 3 seconds
+        setTimeout(function() {
+            notification.fadeOut(300, function() {
+                $(this).remove();
+            });
+        }, 3000);
+    }
+
     // Actions refresh fonksiyonu
     function refreshActions() {
         $.ajax({
             url: bkm_ajax.ajax_url,
             type: 'POST',
+            cache: false, // Cache busting
             data: {
                 action: 'bkm_get_actions',
-                nonce: bkm_ajax.nonce
+                nonce: bkm_ajax.nonce,
+                _: new Date().getTime() // Timestamp for cache busting
             },
             success: function(response) {
+                console.log('✅ Actions refresh başarılı:', response);
                 if (response.success && response.data) {
                     updateActionsTable(response.data);
+                    showNotification('Aksiyon listesi güncellendi', 'success');
                 } else {
                     console.error('Aksiyon listesi yenilenemedi:', response.data);
+                    showNotification('Aksiyon listesi yenilenemedi', 'error');
                 }
             },
             error: function(xhr, status, error) {
-                console.error('AJAX hatası:', error);
+                console.error('AJAX hatası:', error, xhr.responseText);
+                showNotification('Aksiyon listesi yenilenemedi: ' + error, 'error');
+                
+                // Fallback olarak sayfa yenile (3 saniye sonra)
+                setTimeout(function() {
+                    window.location.reload();
+                }, 3000);
             }
         });
     }
 
     // Actions tablosunu güncelleme fonksiyonu
     function updateActionsTable(actions) {
+        console.log('🔄 Actions tablosu güncelleniyor, action count:', actions.length);
+        
         var tbody = $('.bkm-table tbody');
         if (tbody.length === 0) {
             console.error('Actions table tbody bulunamadı');
+            showNotification('Tablo bulunamadı, sayfa yenileniyor...', 'warning');
+            setTimeout(function() {
+                window.location.reload();
+            }, 2000);
             return;
         }
 

@@ -764,6 +764,37 @@
     margin: 0 2px;
 }
 
+/* Notification System */
+.bkm-notifications {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.bkm-notification {
+    background: #007cba;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    max-width: 350px;
+}
+
+.bkm-notification-success {
+    background: #28a745;
+}
+
+.bkm-notification-error {
+    background: #dc3545;
+}
+
+.bkm-notification-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
 .bkm-progress-text {
     position: absolute;
     top: 50%;
