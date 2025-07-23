@@ -2773,13 +2773,27 @@ window.toggleReplyForm = function(taskId, noteId) {
 
     // Actions refresh fonksiyonu
     function refreshActions() {
+        console.log('🔄 refreshActions çağrıldı');
+        
+        // Frontend objesinin varlığını kontrol et
+        if (typeof bkmFrontend === 'undefined' || !bkmFrontend.ajax_url) {
+            console.error('❌ bkmFrontend objesi bulunamadı, sayfa yenileniyor...');
+            showNotification('Sistem hazır değil, sayfa yenileniyor...', 'warning');
+            setTimeout(function() {
+                window.location.reload();
+            }, 1500);
+            return;
+        }
+        
         $.ajax({
-            url: bkm_ajax.ajax_url,
+            url: bkmFrontend.ajax_url,
             type: 'POST',
             cache: false, // Cache busting
+            dataType: 'json',
+            timeout: 30000,
             data: {
                 action: 'bkm_get_actions',
-                nonce: bkm_ajax.nonce,
+                nonce: bkmFrontend.nonce,
                 _: new Date().getTime() // Timestamp for cache busting
             },
             success: function(response) {
@@ -2804,7 +2818,7 @@ window.toggleReplyForm = function(taskId, noteId) {
         });
     }
 
-    // Actions tablosunu güncelleme fonksiyonu
+    // Actions tablosunu güncelleme fonksiyonu - PHP dashboard.php ile uyumlu
     function updateActionsTable(actions) {
         console.log('🔄 Actions tablosu güncelleniyor, action count:', actions.length);
         
@@ -2818,31 +2832,57 @@ window.toggleReplyForm = function(taskId, noteId) {
             return;
         }
 
-        tbody.empty();
+        // Mevcut tüm dynamic rowları temizle
+        tbody.find('tr').remove();
 
         if (actions.length === 0) {
-            tbody.append('<tr><td colspan="8">Henüz aksiyon bulunmamaktadır.</td></tr>');
+            tbody.append('<tr><td colspan="9">Henüz aksiyon bulunmamaktadır.</td></tr>');
             return;
         }
 
         actions.forEach(function(action) {
+            // Ana action row
             var row = $('<tr>');
+            
+            // Data attributes for filtering (dashboard.php'de olduğu gibi)
+            row.attr('data-tanimlayan', action.tanımlayan_name || 'Bilinmiyor');
+            row.attr('data-kategori', action.kategori_name || '');
+            row.attr('data-onem', action.onem_derecesi || 1);
+            row.attr('data-ilerleme', action.ilerleme_durumu || 0);
+            
+            // Status hesaplama (dashboard.php logic)
+            var ilerleme = parseInt(action.ilerleme_durumu || 0);
+            var status = action.status || '';
+            if (!status) {
+                if (ilerleme == 0) {
+                    status = 'open';
+                } else if (ilerleme >= 1 && ilerleme <= 99) {
+                    status = 'active';
+                } else if (ilerleme == 100) {
+                    status = 'completed';
+                }
+            }
+            row.attr('data-durum', status);
             
             // ID
             row.append('<td>' + action.id + '</td>');
             
             // Tanımlayan
-            row.append('<td><span class="bkm-user-badge">' + (action.tanımlayan_name || 'Bilinmiyor') + '</span></td>');
+            row.append('<td>' + escapeHtml(action.tanımlayan_name || 'Bilinmiyor') + '</td>');
             
-            // Sorumlu Kişiler  
+            // Sorumlu Kişiler (dashboard.php stilinde)
             var sorumluCell = '<td>';
             if (action.sorumlu_ids) {
                 var sorumluIds = action.sorumlu_ids.split(',');
                 var sorumluNames = [];
+                
+                // PHP'de get_user_by kullanıldığı gibi, cache'den isim al
                 sorumluIds.forEach(function(id) {
-                    var name = getUserDisplayName(id.trim());
-                    if (name) {
-                        sorumluNames.push(name);
+                    var userId = id.trim();
+                    var user = getUserFromCache(userId);
+                    if (user) {
+                        var displayName = user.display_name || user.user_login || 'Kullanıcı ' + userId;
+                        sorumluNames.push(displayName);
                     }
                 });
                 
@@ -2850,8 +2890,8 @@ window.toggleReplyForm = function(taskId, noteId) {
                     sorumluCell += '<div class="bkm-responsible-users-elegant">';
                     sorumluNames.forEach(function(name, index) {
                         sorumluCell += '<div class="bkm-user-chip">';
-                        sorumluCell += '<span class="bkm-user-avatar">' + name.charAt(0).toUpperCase() + '</span>';
-                        sorumluCell += '<span class="bkm-user-name">' + name + '</span>';
+                        sorumluCell += '<span class="bkm-user-avatar">' + escapeHtml(name.charAt(0).toUpperCase()) + '</span>';
+                        sorumluCell += '<span class="bkm-user-name">' + escapeHtml(name) + '</span>';
                         sorumluCell += '</div>';
                         if (index < sorumluNames.length - 1) {
                             sorumluCell += '<div class="bkm-user-separator">•</div>';
@@ -2868,40 +2908,83 @@ window.toggleReplyForm = function(taskId, noteId) {
             row.append(sorumluCell);
             
             // Kategori
-            row.append('<td><span class="bkm-category-badge">' + (action.kategori_name || '-') + '</span></td>');
+            row.append('<td>' + escapeHtml(action.kategori_name || '') + '</td>');
             
-            // Tespit Konusu
-            row.append('<td>' + (action.tespit_konusu || '-') + '</td>');
+            // Tespit Konusu (dashboard.php'de substr(0, 100) kullanılıyor)
+            var tespitKonusu = action.tespit_konusu || '';
+            if (tespitKonusu.length > 100) {
+                tespitKonusu = tespitKonusu.substring(0, 100) + '...';
+            }
+            row.append('<td class="bkm-action-tespit">' + escapeHtml(tespitKonusu) + '</td>');
             
-            // Önem
-            var onemBadge = getOnemBadge(action.onem);
-            row.append('<td>' + onemBadge + '</td>');
+            // Önem (dashboard.php mantığı)
+            var onemText = '';
+            var onemDerecesi = parseInt(action.onem_derecesi || 1);
+            switch(onemDerecesi) {
+                case 1: onemText = 'Düşük'; break;
+                case 2: onemText = 'Orta'; break;
+                case 3: onemText = 'Yüksek'; break;
+                default: onemText = 'Düşük'; break;
+            }
+            var onemCell = '<span class="bkm-priority priority-' + onemDerecesi + '">' + onemText + '</span>';
+            row.append('<td>' + onemCell + '</td>');
             
-            // İlerleme
-            var progressWrapper = '<div class="bkm-progress-container" style="background: #e9ecef; border-radius: 10px; height: 20px; width: 100%;">';
-            progressWrapper += '<div class="bkm-progress-bar" style="width: ' + (action.ilerleyis || 0) + '%; height: 100%;"></div>';
-            progressWrapper += '</div>';
-            row.append('<td>' + progressWrapper + '</td>');
+            // İlerleme (dashboard.php stilinde)
+            var progressCell = '<div class="bkm-progress" data-action-id="' + action.id + '">';
+            progressCell += '<div class="bkm-progress-bar" style="width: ' + ilerleme + '%"></div>';
+            progressCell += '<span class="bkm-progress-text">' + ilerleme + '%</span>';
+            progressCell += '</div>';
+            row.append('<td>' + progressCell + '</td>');
             
-            // Durum
-            var durumBadge = getDurumBadge(action.durum);
-            row.append('<td>' + durumBadge + '</td>');
+            // Durum (dashboard.php config'i)
+            var statusConfig = {
+                'open': {icon: '🔴', text: 'AÇIK', class: 'status-open'},
+                'active': {icon: '🟡', text: 'DEVAM EDİYOR', class: 'status-active'},
+                'completed': {icon: '🟢', text: 'TAMAMLANDI', class: 'status-completed'}
+            };
+            var config = statusConfig[status] || statusConfig['open'];
+            var statusCell = '<div class="bkm-status-elegant ' + config.class + ' bkm-action-status" data-action-id="' + action.id + '">';
+            statusCell += '<span class="bkm-status-icon">' + config.icon + '</span>';
+            statusCell += '<span class="bkm-status-text">' + config.text + '</span>';
+            statusCell += '</div>';
+            row.append('<td>' + statusCell + '</td>');
             
-            // Görevler  
-            var gorevBtn = '<button class="bkm-btn bkm-btn-info bkm-btn-sm" onclick="showActionTasks(' + action.id + ')">' +
-                          '<i class="fas fa-tasks"></i> Detaylar</button> ' +
-                          '<span class="bkm-task-count">Görevler (' + (action.task_count || 0) + ')</span>';
-            row.append('<td>' + gorevBtn + '</td>');
+            // Görevler
+            var gorevCell = '<div class="bkm-action-buttons-cell">';
+            gorevCell += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleActionDetails(' + action.id + ')">📋 Detaylar</button>';
+            gorevCell += '<button class="bkm-btn bkm-btn-small" onclick="toggleTasks(' + action.id + ')">📝 Görevler (' + (action.task_count || 0) + ')</button>';
+            gorevCell += '</div>';
+            row.append('<td>' + gorevCell + '</td>');
             
             tbody.append(row);
+            
+            // Action details row ekle (dashboard.php'de olduğu gibi) - şimdilik boş
+            var detailsRow = $('<tr id="details-' + action.id + '" class="bkm-action-details-row" style="display: none;">');
+            detailsRow.append('<td colspan="9"><div class="bkm-action-details-container">Detaylar yükleniyor...</div></td>');
+            tbody.append(detailsRow);
+            
+            // Tasks row ekle (dashboard.php'de olduğu gibi) - şimdilik boş
+            var tasksRow = $('<tr id="tasks-' + action.id + '" class="bkm-tasks-row" style="display: none;">');
+            tasksRow.append('<td colspan="9"><div class="bkm-tasks-container">Görevler yükleniyor...</div></td>');
+            tbody.append(tasksRow);
         });
+        
+        console.log('✅ Actions tablosu güncellendi, toplam row:', tbody.find('tr').length);
     }
 
     // Helper fonksiyonları
-    function getUserDisplayName(userId) {
+    function getUserFromCache(userId) {
         userId = parseInt(userId);
         if (window.usersCache && window.usersCache[userId]) {
-            return window.usersCache[userId].display_name;
+            return window.usersCache[userId];
+        }
+        return null;
+    }
+    
+    function getUserDisplayName(userId) {
+        var user = getUserFromCache(userId);
+        if (user) {
+            return user.display_name || user.user_login || 'User ' + userId;
         }
         return 'User ' + userId;
     }

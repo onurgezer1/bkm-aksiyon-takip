@@ -2086,9 +2086,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // User cache'ini global olarak ayarla
-    if (typeof window.usersCache !== 'undefined') {
-        window.usersCache = <?php echo json_encode($users_for_js); ?>;
-        console.log('👥 Users cache ayarlandı:', window.usersCache);
-    }
+    window.usersCache = <?php echo json_encode($users_for_js); ?>;
+    console.log('👥 Users cache ayarlandı:', window.usersCache);
 });
 </script>
