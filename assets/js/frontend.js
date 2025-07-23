@@ -2838,6 +2838,7 @@ window.toggleReplyForm = function(taskId, noteId) {
                 console.log('✅ Actions refresh başarılı:', response);
                 if (response && response.success && response.data) {
                     updateActionsTable(response.data);
+                    updateActionDropdown(response.data); // Görev ekleme formundaki dropdown'ı da güncelle
                     showNotification('Aksiyon listesi güncellendi (' + response.data.length + ' aksiyon)', 'success');
                 } else {
                     console.error('❌ Aksiyon listesi yenilenemedi:', response);
@@ -2865,6 +2866,40 @@ window.toggleReplyForm = function(taskId, noteId) {
                 }, 3000);
             }
         });
+    }
+
+    // Görev ekleme formundaki aksiyon dropdown'ını güncelle
+    function updateActionDropdown(actions) {
+        console.log('🔄 Aksiyon dropdown güncelleniyor, action count:', actions.length);
+        
+        var actionSelect = $('#action_id');
+        if (actionSelect.length === 0) {
+            console.log('📝 Aksiyon dropdown bulunamadı (görev ekleme formu kapalı)');
+            return;
+        }
+
+        // Mevcut seçimi koru
+        var currentValue = actionSelect.val();
+        
+        // Dropdown'ı temizle ve yeniden doldur
+        actionSelect.empty();
+        actionSelect.append('<option value="">Seçiniz...</option>');
+        
+        actions.forEach(function(action) {
+            var title = action.tespit_konusu || action.title || action.aciklama || '';
+            var shortTitle = title.length > 50 ? title.substring(0, 50) + '...' : title;
+            var optionText = '#' + action.id + ' - ' + shortTitle;
+            
+            var option = $('<option>').val(action.id).text(optionText);
+            actionSelect.append(option);
+        });
+        
+        // Önceki seçimi geri yükle (eğer hala mevcut ise)
+        if (currentValue && actionSelect.find('option[value="' + currentValue + '"]').length > 0) {
+            actionSelect.val(currentValue);
+        }
+        
+        console.log('✅ Aksiyon dropdown güncellendi: ' + actions.length + ' seçenek');
     }
 
     // Actions tablosunu güncelleme fonksiyonu - PHP dashboard.php ile uyumlu
@@ -3286,6 +3321,7 @@ window.toggleReplyForm = function(taskId, noteId) {
     window.refreshPerformanceList = refreshPerformanceList;
     window.refreshActions = refreshActions;
     window.updateActionsTable = updateActionsTable;
+    window.updateActionDropdown = updateActionDropdown;
     window.displayUsers = displayUsers;
     window.handleUserFormSubmit = handleUserFormSubmit;
     window.clearUserForm = clearUserForm;
@@ -3296,6 +3332,15 @@ window.toggleReplyForm = function(taskId, noteId) {
         console.log('📋 BKM Frontend JS yüklendi');
         console.log('✅ jQuery versiyonu:', $.fn.jquery);
         console.log('🎯 BKM Container:', $('.bkm-frontend-container').length > 0 ? 'Bulundu' : 'Bulunamadı');
+        
+        // Sayfa yüklendiğinde aksiyon dropdown'ını da güncelle
+        if ($('#action_id').length > 0) {
+            console.log('📝 Görev ekleme formu tespit edildi, aksiyon dropdown yükleniyor...');
+            // 2 saniye gecikme ile dropdown'ı güncelle (sayfa tam yüklendikten sonra)
+            setTimeout(function() {
+                refreshActions();
+            }, 2000);
+        }
         
         // CSS fix - WordPress tema çakışmalarını çöz
         $('head').append(`

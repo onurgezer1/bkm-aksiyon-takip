@@ -33,8 +33,18 @@ define('BKM_EMAIL_TEMPLATE_FOOTER', '</div><div style="background:#f6f8fa;color:
  */
 function bkm_debug_log($message) {
     if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log($message);
+        error_log('[BKM] ' . $message);
     }
+}
+
+/**
+ * Enable debug mode for this plugin temporarily
+ */
+if (!defined('WP_DEBUG')) {
+    define('WP_DEBUG', true);
+}
+if (!defined('WP_DEBUG_LOG')) {
+    define('WP_DEBUG_LOG', true);
 }
 
 function bkm_get_html_email($subject, $content_html) {
@@ -2063,6 +2073,10 @@ public function ajax_get_actions() {
     // Debug: Same logic as dashboard.php
     $debug_show_all_actions = defined('BKM_DEBUG_SHOW_ALL_ACTIONS') && BKM_DEBUG_SHOW_ALL_ACTIONS;
     
+    // DEBUG: Log user role and permissions for troubleshooting
+    bkm_debug_log('🎯 AJAX get_actions - User ID: ' . $current_user_id . ', Roles: ' . implode(',', $user_roles));
+    bkm_debug_log('🔍 Admin: ' . ($is_admin ? 'YES' : 'NO') . ', Editor: ' . ($is_editor ? 'YES' : 'NO') . ', Debug Mode: ' . ($debug_show_all_actions ? 'YES' : 'NO'));
+    
     if ($debug_show_all_actions || $is_admin || $is_editor) {
         // Admins and editors (and debug mode) see all actions
         $actions_query = "SELECT a.*, 
@@ -2074,6 +2088,7 @@ public function ajax_get_actions() {
                          LEFT JOIN $categories_table c ON a.kategori_id = c.id
                          LEFT JOIN $performance_table p ON a.performans_id = p.id
                          ORDER BY a.created_at DESC";
+        bkm_debug_log('📋 AJAX - Admin/Editor sorgusu kullanılıyor');
 
     } else {
         // Non-admins see actions they created OR are responsible for
@@ -2091,13 +2106,14 @@ public function ajax_get_actions() {
             $current_user_id,
             '%' . $wpdb->esc_like($current_user_id) . '%'
         );
+        bkm_debug_log('📋 AJAX - Kullanıcı kısıtlı sorgu kullanılıyor');
 
     }
     
     $actions = $wpdb->get_results($actions_query);
     
     // Debug logging
-    bkm_debug_log('🔍 AJAX get_actions - User: ' . $current_user_id . ' (' . implode(',', $user_roles) . '), Actions found: ' . count($actions));
+    bkm_debug_log('📊 AJAX - Bulunan aksiyon sayısı: ' . count($actions));
     if (count($actions) > 0) {
         $latest_action = $actions[0];
         bkm_debug_log('📋 Latest action: ID=' . $latest_action->id . ', Tanımlayan=' . $latest_action->tanımlayan_id . ', Created=' . $latest_action->created_at);

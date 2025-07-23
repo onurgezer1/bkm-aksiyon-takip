@@ -47,6 +47,10 @@ $current_user_id = $current_user->ID;
 // Debug: Test mode to see all actions regardless of user permissions
 $debug_show_all_actions = defined('BKM_DEBUG_SHOW_ALL_ACTIONS') && BKM_DEBUG_SHOW_ALL_ACTIONS; // Can be enabled by adding define('BKM_DEBUG_SHOW_ALL_ACTIONS', true); to wp-config.php
 
+// DEBUG: Log user role and permissions for troubleshooting
+bkm_debug_log('🎯 Dashboard sayfa yüklenme - User ID: ' . $current_user_id . ', Roles: ' . implode(',', $user_roles));
+bkm_debug_log('🔍 Admin: ' . ($is_admin ? 'YES' : 'NO') . ', Editor: ' . ($is_editor ? 'YES' : 'NO') . ', Debug Mode: ' . ($debug_show_all_actions ? 'YES' : 'NO'));
+
 if ($debug_show_all_actions || $is_admin || $is_editor) {
     // Admins and editors (and debug mode) see all actions
     $actions_query = "SELECT a.*, 
@@ -58,6 +62,7 @@ if ($debug_show_all_actions || $is_admin || $is_editor) {
                      LEFT JOIN $categories_table c ON a.kategori_id = c.id
                      LEFT JOIN $performance_table p ON a.performans_id = p.id
                      ORDER BY a.created_at DESC";
+    bkm_debug_log('📋 Dashboard - Admin/Editor sorgusu kullanılıyor');
 
 } else {
     // Non-admins see actions they created OR are responsible for
@@ -75,10 +80,12 @@ if ($debug_show_all_actions || $is_admin || $is_editor) {
         $current_user_id,
         '%' . $wpdb->esc_like($current_user_id) . '%'
     );
+    bkm_debug_log('📋 Dashboard - Kullanıcı kısıtlı sorgu kullanılıyor');
 
 }
 
 $actions = $wpdb->get_results($actions_query);
+bkm_debug_log('📊 Dashboard - Bulunan aksiyon sayısı: ' . count($actions));
 
 // Get all users for JavaScript cache  
 $all_users = $wpdb->get_results("
