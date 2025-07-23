@@ -2061,7 +2061,7 @@ public function ajax_get_actions() {
     $performance_table = $wpdb->prefix . 'bkm_performances';
     
     // Debug: Same logic as dashboard.php
-    $debug_show_all_actions = false; // Disabled for production
+    $debug_show_all_actions = defined('BKM_DEBUG_SHOW_ALL_ACTIONS') && BKM_DEBUG_SHOW_ALL_ACTIONS;
     
     if ($debug_show_all_actions || $is_admin || $is_editor) {
         // Admins and editors (and debug mode) see all actions
@@ -2095,6 +2095,13 @@ public function ajax_get_actions() {
     }
     
     $actions = $wpdb->get_results($actions_query);
+    
+    // Debug logging
+    bkm_debug_log('🔍 AJAX get_actions - User: ' . $current_user_id . ' (' . implode(',', $user_roles) . '), Actions found: ' . count($actions));
+    if (count($actions) > 0) {
+        $latest_action = $actions[0];
+        bkm_debug_log('📋 Latest action: ID=' . $latest_action->id . ', Tanımlayan=' . $latest_action->tanımlayan_id . ', Created=' . $latest_action->created_at);
+    }
     
     // Her action için task count'u ekle
     $tasks_table = $wpdb->prefix . 'bkm_tasks';
@@ -2207,6 +2214,9 @@ public function ajax_add_action() {
         $tanımlayan_id = !empty($admin_users) ? $admin_users[0]->ID : 1;
     }
     
+    // Debug logging
+    bkm_debug_log('🎯 Action ekleniyor - User ID: ' . $tanımlayan_id . ', Sorumlu IDs: ' . $sorumlu_ids);
+    
     // If sorumlu_ids is array, convert to string
     if (is_array($sorumlu_ids)) {
         $sorumlu_ids = implode(',', array_map('intval', $sorumlu_ids));
@@ -2253,10 +2263,12 @@ public function ajax_add_action() {
     );
     
     if ($result === false) {
+        bkm_debug_log('❌ Action ekleme hatası: ' . $wpdb->last_error);
         wp_send_json_error('Aksiyon eklenemedi.');
     }
     
     $action_id = $wpdb->insert_id;
+    bkm_debug_log('✅ Action eklendi - ID: ' . $action_id . ', Tanımlayan: ' . $tanımlayan_id);
     
     // Get category name
     $categories_table = $wpdb->prefix . 'bkm_categories';

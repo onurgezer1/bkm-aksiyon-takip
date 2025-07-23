@@ -45,7 +45,7 @@ $current_user_id = $current_user->ID;
 
 
 // Debug: Test mode to see all actions regardless of user permissions
-$debug_show_all_actions = false; // Disabled for production
+$debug_show_all_actions = defined('BKM_DEBUG_SHOW_ALL_ACTIONS') && BKM_DEBUG_SHOW_ALL_ACTIONS; // Can be enabled by adding define('BKM_DEBUG_SHOW_ALL_ACTIONS', true); to wp-config.php
 
 if ($debug_show_all_actions || $is_admin || $is_editor) {
     // Admins and editors (and debug mode) see all actions
