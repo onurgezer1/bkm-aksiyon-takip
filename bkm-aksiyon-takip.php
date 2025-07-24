@@ -2150,6 +2150,11 @@ public function ajax_get_tasks() {
         wp_send_json_error('Giriş yapmalısınız.');
     }
     
+    // Verify nonce for security
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
+        wp_send_json_error('Güvenlik kontrolü başarısız.');
+    }
+    
     $current_user = wp_get_current_user();
     $current_user_id = $current_user->ID;
     $user_roles = $current_user->roles;
