@@ -1721,12 +1721,9 @@ function toggleTasks(actionId) {
 }
 
 // Load tasks for a specific action via AJAX
-function loadTasksForAction(actionId) {
-    console.log('📋 Loading tasks for action:', actionId);
-    
+function loadTasksForAction(actionId) {    
     var tasksContainer = document.querySelector('#tasks-' + actionId + ' .bkm-tasks-container');
     if (!tasksContainer) {
-        console.error('❌ Tasks container not found for action:', actionId);
         return;
     }
     
@@ -1735,7 +1732,6 @@ function loadTasksForAction(actionId) {
     
     // Check if jQuery and bkmFrontend are available
     if (typeof jQuery === 'undefined' || typeof bkmFrontend === 'undefined') {
-        console.error('❌ jQuery or bkmFrontend not available');
         tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ Sistem hazır değil. Lütfen sayfayı yenileyin.</div>';
         return;
     }
@@ -1752,22 +1748,17 @@ function loadTasksForAction(actionId) {
             nonce: bkmFrontend.nonce
         },
         success: function(response) {
-            console.log('✅ Tasks response received:', response);
-            
             if (response && response.success && Array.isArray(response.data)) {
-                console.log('📋 Tasks data:', response.data);
                 displayTasksInContainer(tasksContainer, response.data, actionId);
             } else {
                 var errorMsg = 'Görevler yüklenirken hata oluştu.';
                 if (response && response.data && typeof response.data === 'string') {
                     errorMsg = response.data;
                 }
-                console.log('❌ Tasks error:', errorMsg, response);
                 tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ ' + errorMsg + '</div>';
             }
         },
         error: function(xhr, status, error) {
-            console.error('❌ AJAX error loading tasks:', error, xhr.responseText);
             var errorMsg = 'Bağlantı hatası oluştu.';
             if (xhr.status === 403) {
                 errorMsg = 'Bu işlemi yapmaya yetkiniz yok.';
@@ -1781,8 +1772,6 @@ function loadTasksForAction(actionId) {
 
 // Display tasks in the container
 function displayTasksInContainer(container, tasks, actionId) {
-    console.log('🎯 displayTasksInContainer called with:', tasks);
-    
     if (!tasks || tasks.length === 0) {
         container.innerHTML = '<h4>Görevler</h4><p>Bu aksiyon için henüz görev bulunmamaktadır.</p>';
         return;
@@ -1791,31 +1780,34 @@ function displayTasksInContainer(container, tasks, actionId) {
     var html = '<h4>Görevler (' + tasks.length + ')</h4><div class="bkm-tasks-list">';
     
     tasks.forEach(function(task, index) {
-        console.log('📝 Processing task', index + 1, ':', task);
-        
         var progressValue = parseInt(task.ilerleme_durumu || task.progress || 0);
         var isCompleted = task.tamamlandi || task.completed_at || progressValue === 100;
         
-        // Try different field combinations for task content
-        var taskContent = task.content || task.title || task.baslik || task.description || task.aciklama || 'Görev içeriği mevcut değil';
-        
-        console.log('🔍 Task content resolved to:', taskContent);
+        // Use standardized content field from backend
+        var taskContent = task.content || 'Görev içeriği mevcut değil';
         
         html += '<div class="bkm-task-item' + (isCompleted ? ' completed' : '') + '" data-task-id="' + task.id + '">';
         html += '<div class="bkm-task-content">';
         html += '<p><strong>' + escapeHtml(taskContent) + '</strong></p>';
+        
+        if (task.description && task.description.trim()) {
+            html += '<p style="margin-top: 5px; color: #666;">' + escapeHtml(task.description) + '</p>';
+        }
+        
         html += '<div class="bkm-task-meta">';
-        html += '<span>Sorumlu: ' + escapeHtml(task.sorumlu_name || task.responsible || 'Belirtilmemiş') + '</span>';
-        if (task.baslangic_tarihi || task.start_date) {
-            html += '<span>Başlangıç: ' + formatDate(task.baslangic_tarihi || task.start_date) + '</span>';
+        html += '<span>Sorumlu: ' + escapeHtml(task.sorumlu_name || 'Belirtilmemiş') + '</span>';
+        
+        if (task.baslangic_tarihi) {
+            html += '<span>Başlangıç: ' + formatDate(task.baslangic_tarihi) + '</span>';
         }
-        if (task.hedef_bitis_tarihi || task.target_date) {
-            html += '<span>Hedef: ' + formatDate(task.hedef_bitis_tarihi || task.target_date) + '</span>';
+        if (task.hedef_bitis_tarihi) {
+            html += '<span>Hedef: ' + formatDate(task.hedef_bitis_tarihi) + '</span>';
         }
-        if (task.gercek_bitis_tarihi || task.completed_at) {
-            html += '<span>Bitiş: ' + formatDateTime(task.gercek_bitis_tarihi || task.completed_at) + '</span>';
+        if (task.gercek_bitis_tarihi) {
+            html += '<span>Bitiş: ' + formatDateTime(task.gercek_bitis_tarihi) + '</span>';
         }
         html += '</div>';
+        
         html += '<div class="bkm-task-progress">';
         html += '<div class="bkm-progress">';
         html += '<div class="bkm-progress-bar" style="width: ' + progressValue + '%"></div>';
@@ -1834,8 +1826,6 @@ function displayTasksInContainer(container, tasks, actionId) {
     
     html += '</div>';
     container.innerHTML = html;
-    
-    console.log('✅ Tasks HTML generated and inserted');
 }
 
 // Helper functions for date formatting
