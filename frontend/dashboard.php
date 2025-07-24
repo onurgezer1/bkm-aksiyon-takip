@@ -1736,9 +1736,15 @@ function loadTasksForAction(actionId) {
     tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px;">📋 Görevler yükleniyor...</div>';
     
     // Check if jQuery and bkmFrontend are available
-    if (typeof jQuery === 'undefined' || typeof bkmFrontend === 'undefined') {
-        console.error('❌ jQuery veya bkmFrontend mevcut değil');
-        tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ Sistem hazır değil. Lütfen sayfayı yenileyin.</div>';
+    if (typeof jQuery === 'undefined') {
+        console.error('❌ jQuery mevcut değil');
+        tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ jQuery yüklenmemiş. Lütfen sayfayı yenileyin.</div>';
+        return;
+    }
+    
+    if (typeof bkmFrontend === 'undefined') {
+        console.error('❌ bkmFrontend mevcut değil');
+        tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ Frontend ayarları yüklenmemiş. Lütfen sayfayı yenileyin.</div>';
         return;
     }
     
@@ -1746,7 +1752,7 @@ function loadTasksForAction(actionId) {
         url: bkmFrontend.ajax_url,
         action: 'bkm_get_tasks',
         action_id: actionId,
-        nonce: bkmFrontend.nonce ? 'MEVCUT' : 'EKSİK'
+        nonce: bkmFrontend.nonce ? 'MEVCUT (' + bkmFrontend.nonce.substring(0, 6) + '...)' : 'EKSİK'
     });
     
     // AJAX request to get tasks
@@ -1763,19 +1769,31 @@ function loadTasksForAction(actionId) {
         success: function(response) {
             console.log('✅ AJAX yanıtı alındı:', response);
             
-            if (response && response.success) {
-                if (Array.isArray(response.data)) {
-                    console.log('📋 Bulunan görev sayısı:', response.data.length);
-                    displayTasksInContainer(tasksContainer, response.data, actionId);
+            // Ensure response is valid and has expected structure
+            if (!response) {
+                console.error('❌ Response is null or undefined');
+                tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ Sunucudan yanıt alınamadı.</div>';
+                return;
+            }
+            
+            if (response.success === true) {
+                // Handle successful response
+                var tasks = response.data || [];
+                if (Array.isArray(tasks)) {
+                    console.log('📋 Bulunan görev sayısı:', tasks.length);
+                    displayTasksInContainer(tasksContainer, tasks, actionId);
                 } else {
-                    console.error('❌ Response data array değil:', typeof response.data);
+                    console.error('❌ Response data array değil:', typeof tasks, tasks);
                     tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ Görev verileri beklenen formatta değil.</div>';
                 }
             } else {
+                // Handle error response
                 console.error('❌ AJAX başarısız response:', response);
                 var errorMsg = 'Görevler yüklenirken hata oluştu.';
-                if (response && response.data && typeof response.data === 'string') {
+                if (response.data && typeof response.data === 'string') {
                     errorMsg = response.data;
+                } else if (response.message) {
+                    errorMsg = response.message;
                 }
                 tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ ' + errorMsg + '</div>';
             }

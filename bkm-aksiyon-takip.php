@@ -2153,10 +2153,15 @@ public function ajax_get_tasks() {
         wp_send_json_error('Giriş yapmalısınız.');
     }
     
-    // Verify nonce for security (but be more lenient for debugging)
-    if (isset($_POST['nonce']) && !wp_verify_nonce($_POST['nonce'], 'bkm_frontend_nonce')) {
-        error_log('❌ Invalid nonce in ajax_get_tasks');
-        wp_send_json_error('Güvenlik kontrolü başarısız.');
+    // Verify nonce for security (temporarily more lenient for debugging)
+    if (isset($_POST['nonce'])) {
+        if (!wp_verify_nonce($_POST['nonce'], 'bkm_frontend_nonce')) {
+            error_log('❌ Invalid nonce in ajax_get_tasks. Provided: ' . $_POST['nonce']);
+            wp_send_json_error('Güvenlik kontrolü başarısız. Lütfen sayfayı yenileyin.');
+        }
+    } else {
+        error_log('⚠️ No nonce provided in ajax_get_tasks');
+        // For now, continue without nonce to debug the main issue
     }
     
     $current_user = wp_get_current_user();
