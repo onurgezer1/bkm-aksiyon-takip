@@ -1755,12 +1755,14 @@ function loadTasksForAction(actionId) {
             console.log('✅ Tasks response received:', response);
             
             if (response && response.success && Array.isArray(response.data)) {
+                console.log('📋 Tasks data:', response.data);
                 displayTasksInContainer(tasksContainer, response.data, actionId);
             } else {
                 var errorMsg = 'Görevler yüklenirken hata oluştu.';
                 if (response && response.data && typeof response.data === 'string') {
                     errorMsg = response.data;
                 }
+                console.log('❌ Tasks error:', errorMsg, response);
                 tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ ' + errorMsg + '</div>';
             }
         },
@@ -1779,30 +1781,39 @@ function loadTasksForAction(actionId) {
 
 // Display tasks in the container
 function displayTasksInContainer(container, tasks, actionId) {
+    console.log('🎯 displayTasksInContainer called with:', tasks);
+    
     if (!tasks || tasks.length === 0) {
         container.innerHTML = '<h4>Görevler</h4><p>Bu aksiyon için henüz görev bulunmamaktadır.</p>';
         return;
     }
     
-    var html = '<h4>Görevler</h4><div class="bkm-tasks-list">';
+    var html = '<h4>Görevler (' + tasks.length + ')</h4><div class="bkm-tasks-list">';
     
-    tasks.forEach(function(task) {
-        var progressValue = parseInt(task.ilerleme_durumu || 0);
-        var isCompleted = task.tamamlandi || progressValue === 100;
+    tasks.forEach(function(task, index) {
+        console.log('📝 Processing task', index + 1, ':', task);
+        
+        var progressValue = parseInt(task.ilerleme_durumu || task.progress || 0);
+        var isCompleted = task.tamamlandi || task.completed_at || progressValue === 100;
+        
+        // Try different field combinations for task content
+        var taskContent = task.content || task.title || task.baslik || task.description || task.aciklama || 'Görev içeriği mevcut değil';
+        
+        console.log('🔍 Task content resolved to:', taskContent);
         
         html += '<div class="bkm-task-item' + (isCompleted ? ' completed' : '') + '" data-task-id="' + task.id + '">';
         html += '<div class="bkm-task-content">';
-        html += '<p><strong>' + escapeHtml(task.content || task.aciklama || 'Görev içeriği mevcut değil') + '</strong></p>';
+        html += '<p><strong>' + escapeHtml(taskContent) + '</strong></p>';
         html += '<div class="bkm-task-meta">';
-        html += '<span>Sorumlu: ' + escapeHtml(task.sorumlu_name || 'Belirtilmemiş') + '</span>';
-        if (task.baslangic_tarihi) {
-            html += '<span>Başlangıç: ' + formatDate(task.baslangic_tarihi) + '</span>';
+        html += '<span>Sorumlu: ' + escapeHtml(task.sorumlu_name || task.responsible || 'Belirtilmemiş') + '</span>';
+        if (task.baslangic_tarihi || task.start_date) {
+            html += '<span>Başlangıç: ' + formatDate(task.baslangic_tarihi || task.start_date) + '</span>';
         }
-        if (task.hedef_bitis_tarihi) {
-            html += '<span>Hedef: ' + formatDate(task.hedef_bitis_tarihi) + '</span>';
+        if (task.hedef_bitis_tarihi || task.target_date) {
+            html += '<span>Hedef: ' + formatDate(task.hedef_bitis_tarihi || task.target_date) + '</span>';
         }
-        if (task.gercek_bitis_tarihi) {
-            html += '<span>Bitiş: ' + formatDateTime(task.gercek_bitis_tarihi) + '</span>';
+        if (task.gercek_bitis_tarihi || task.completed_at) {
+            html += '<span>Bitiş: ' + formatDateTime(task.gercek_bitis_tarihi || task.completed_at) + '</span>';
         }
         html += '</div>';
         html += '<div class="bkm-task-progress">';
@@ -1823,6 +1834,8 @@ function displayTasksInContainer(container, tasks, actionId) {
     
     html += '</div>';
     container.innerHTML = html;
+    
+    console.log('✅ Tasks HTML generated and inserted');
 }
 
 // Helper functions for date formatting
