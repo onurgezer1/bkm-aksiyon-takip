@@ -2371,18 +2371,8 @@ window.clearActionForm = clearActionForm;
 window.loadUsers = loadUsers;
 window.handleUserFormSubmit = handleUserFormSubmit;
 
-window.toggleTasks = function(actionId) {
-    console.log('🔧 toggleTasks çağrıldı, actionId:', actionId);
-    var tasksRow = jQuery('#tasks-' + actionId);
-    console.log('📝 Tasks row bulundu:', tasksRow.length);
-    
-    if (tasksRow.length > 0) {
-        tasksRow.slideToggle();
-    } else {
-        console.error('❌ Tasks row bulunamadı, ID:', '#tasks-' + actionId);
-        showNotification('Görevler bölümü bulunamadı.', 'error');
-    }
-}
+// toggleTasks function is implemented in dashboard.php with AJAX functionality
+// Removed duplicate implementation to prevent override
 
 window.toggleActionDetails = function(actionId) {
     console.log('🔧 toggleActionDetails çağrıldı, actionId:', actionId);
@@ -3461,10 +3451,7 @@ window.switchSettingsTab = window.switchSettingsTab || function(tabName) {
 };
 
 // Aksiyon ve görev detay fonksiyonları
-window.toggleTasks = window.toggleTasks || function(actionId) {
-    console.log('🔧 toggleTasks çağrıldı (fallback):', actionId);
-    jQuery('#tasks-' + actionId).slideToggle();
-};
+// toggleTasks is handled by dashboard.php - no fallback needed
 
 window.toggleActionDetails = window.toggleActionDetails || function(actionId) {
     console.log('🔧 toggleActionDetails çağrıldı (fallback):', actionId);
@@ -3860,11 +3847,11 @@ window.resetCompanyForm = resetCompanyForm;
 window.loadCompanyInfo = loadCompanyInfo;
 window.updateCompanyInfoDisplay = updateCompanyInfoDisplay;
 
-// Ensure all critical functions are globally available
+// Ensure all critical functions are globally available (except toggleTasks which is in dashboard.php)
 window.toggleNotes = window.toggleNotes;
 window.toggleNoteForm = window.toggleNoteForm;
 window.toggleActionDetails = window.toggleActionDetails;
-window.toggleTasks = window.toggleTasks;
+// window.toggleTasks is handled by dashboard.php
 window.toggleActionForm = window.toggleActionForm;
 window.toggleTaskForm = window.toggleTaskForm;
 window.toggleSettingsPanel = window.toggleSettingsPanel;
@@ -3876,7 +3863,7 @@ console.log('🔧 Mevcut global fonksiyonlar:', {
     toggleNotes: typeof window.toggleNotes,
     toggleNoteForm: typeof window.toggleNoteForm,
     toggleActionDetails: typeof window.toggleActionDetails,
-    toggleTasks: typeof window.toggleTasks,
+    toggleTasks: 'handled by dashboard.php',
     toggleActionForm: typeof window.toggleActionForm,
     toggleTaskForm: typeof window.toggleTaskForm,
     showNotification: typeof window.showNotification,
