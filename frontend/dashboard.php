@@ -1881,7 +1881,6 @@ function displayTasksInContainer(container, tasks, actionId) {
     container.innerHTML = html;
     console.log('🎉 Container güncellendi!');
 }
-}
 
 // Helper functions for date formatting
 function formatDate(dateString) {
