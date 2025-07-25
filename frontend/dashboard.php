@@ -20,6 +20,13 @@ if (isset($_GET['bkm_logout'])) {
 
 // User is logged in, show dashboard
 global $wpdb;
+
+// Check if WordPress database is available
+if (!$wpdb) {
+    echo '<div class="bkm-error">Veritabanı bağlantısı mevcut değil. Lütfen WordPress yöneticinizle iletişime geçin.</div>';
+    return;
+}
+
 $current_user = wp_get_current_user();
 
 // Check if user has permission to view
@@ -35,17 +42,51 @@ $notes_table = $wpdb->prefix . 'bkm_task_notes';
 $categories_table = $wpdb->prefix . 'bkm_categories';
 $performance_table = $wpdb->prefix . 'bkm_performances';
 
-// Determine SQL query based on user role
+// Check if required tables exist
+$required_tables = array(
+    'Aksiyonlar' => $actions_table,
+    'Görevler' => $tasks_table,
+    'Kategoriler' => $categories_table,
+    'Performans' => $performance_table
+);
+
+$missing_tables = array();
+foreach ($required_tables as $table_label => $table_name) {
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'");
+    if (!$table_exists) {
+        $missing_tables[] = $table_label;
+    }
+}
+
+if (!empty($missing_tables)) {
+    echo '<div class="bkm-error">';
+    echo '<h3>Veritabanı Tabloları Eksik</h3>';
+    echo '<p>Aşağıdaki tablolar bulunamadı: <strong>' . implode(', ', $missing_tables) . '</strong></p>';
+    echo '<p>Lütfen plugin\'i devre dışı bırakıp tekrar aktifleştirin veya sistem yöneticinizle iletişime geçin.</p>';
+    echo '<style>.bkm-error { background: #ffebcd; border: 1px solid #ff9800; padding: 15px; margin: 15px 0; border-radius: 5px; }</style>';
+    echo '</div>';
+    return;
+}
+
+// Determine SQL query based on user role - CONSISTENT WITH AJAX
 $user_roles = $current_user->roles;
-$is_admin = in_array('administrator', $user_roles);
-$is_editor = in_array('editor', $user_roles);
+
+// Force array if user_roles is not an array
+if (!is_array($user_roles)) {
+    $user_roles = array();
+}
+
+// More robust role checking - same as AJAX
+$is_admin = in_array('administrator', $user_roles) || current_user_can('manage_options');
+$is_editor = in_array('editor', $user_roles) || current_user_can('edit_others_posts');
 $is_contributor = in_array('contributor', $user_roles);
 $current_user_id = $current_user->ID;
 
-error_log("Is admin (global): " . ($is_admin ? 'true' : 'false') . ", User roles: " . implode(', ', $user_roles) . ", User ID: " . $current_user_id);
 
-if ($is_admin || $is_editor) {
-    // Admins and editors see all actions
+// Debug: Test mode to see all actions regardless of user permissions
+$debug_show_all_actions = defined('BKM_DEBUG_SHOW_ALL_ACTIONS') && BKM_DEBUG_SHOW_ALL_ACTIONS; // Can be enabled by adding define('BKM_DEBUG_SHOW_ALL_ACTIONS', true); to wp-config.php
+
+if ($debug_show_all_actions || $is_admin || $is_editor) {
     $actions_query = "SELECT a.*, 
                             COALESCE(u.display_name, 'Bilinmiyor') as tanımlayan_name,
                             c.name as kategori_name,
@@ -55,8 +96,9 @@ if ($is_admin || $is_editor) {
                      LEFT JOIN $categories_table c ON a.kategori_id = c.id
                      LEFT JOIN $performance_table p ON a.performans_id = p.id
                      ORDER BY a.created_at DESC";
+
 } else {
-    // Non-admins and non-editors see only their assigned actions
+    // Non-admins see actions they created OR are responsible for
     $actions_query = $wpdb->prepare(
         "SELECT a.*, 
                 COALESCE(u.display_name, 'Bilinmiyor') as tanımlayan_name,
@@ -66,13 +108,41 @@ if ($is_admin || $is_editor) {
          LEFT JOIN {$wpdb->users} u ON a.tanımlayan_id = u.ID AND a.tanımlayan_id > 0
          LEFT JOIN $categories_table c ON a.kategori_id = c.id
          LEFT JOIN $performance_table p ON a.performans_id = p.id
-         WHERE a.sorumlu_ids LIKE %s
+         WHERE (a.tanımlayan_id = %d OR a.sorumlu_ids LIKE %s)
          ORDER BY a.created_at DESC",
+        $current_user_id,
         '%' . $wpdb->esc_like($current_user_id) . '%'
     );
+
 }
 
 $actions = $wpdb->get_results($actions_query);
+
+// Get all users for JavaScript cache  
+$all_users = $wpdb->get_results("
+    SELECT u.ID, u.display_name, u.user_login, 
+           m1.meta_value as first_name, 
+           m2.meta_value as last_name
+    FROM {$wpdb->users} u
+    LEFT JOIN {$wpdb->usermeta} m1 ON u.ID = m1.user_id AND m1.meta_key = 'first_name'
+    LEFT JOIN {$wpdb->usermeta} m2 ON u.ID = m2.user_id AND m2.meta_key = 'last_name'
+    ORDER BY u.display_name
+");
+$users_for_js = array();
+foreach ($all_users as $user) {
+    $full_name = trim($user->first_name . ' ' . $user->last_name);
+    $display_name = !empty($full_name) ? $full_name : $user->display_name;
+    
+    $users_for_js[$user->ID] = array(
+        'id' => $user->ID,
+        'display_name' => $display_name,
+        'user_login' => $user->user_login,
+        'first_name' => $user->first_name ?: '',
+        'last_name' => $user->last_name ?: ''
+    );
+}
+
+
 
 // Define display_notes function once at the top
 function display_notes($notes, $parent_id = null, $level = 0, $is_admin_param = false, $task = null) {
@@ -775,6 +845,8 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
             </div>
         </div>
         
+
+        
         <!-- Actions Table -->
         <div class="bkm-actions-section">
             <div class="bkm-section-header">
@@ -782,6 +854,9 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                 <div class="bkm-action-buttons">
                     <button class="bkm-btn bkm-btn-info" onclick="toggleFilterPanel()">
                         🔍 Filtrele
+                    </button>
+                    <button class="bkm-btn bkm-btn-secondary" onclick="refreshActions()" title="Aksiyon listesini yenile">
+                        🔄 Yenile
                     </button>
                     <?php if ($is_admin || $is_editor): ?>
                         <button class="bkm-btn bkm-btn-success" onclick="toggleActionForm()">
@@ -1670,10 +1745,229 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
 function toggleTasks(actionId) {
     var tasksRow = document.getElementById('tasks-' + actionId);
     if (tasksRow.style.display === 'none' || tasksRow.style.display === '') {
+        // Show tasks row and load tasks via AJAX
         tasksRow.style.display = 'table-row';
+        loadTasksForAction(actionId);
     } else {
         tasksRow.style.display = 'none';
     }
+}
+
+// Load tasks for a specific action via AJAX
+function loadTasksForAction(actionId) {    
+    console.log('🧪 loadTasksForAction çağrıldı, actionId:', actionId);
+    
+    var tasksContainer = document.querySelector('#tasks-' + actionId + ' .bkm-tasks-container');
+    if (!tasksContainer) {
+        console.error('❌ Tasks container bulunamadı:', '#tasks-' + actionId + ' .bkm-tasks-container');
+        return;
+    }
+    
+    console.log('✅ Tasks container bulundu:', tasksContainer);
+    
+    // Show loading message
+    tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px;">📋 Görevler yükleniyor...</div>';
+    
+    // Check if jQuery and bkmFrontend are available
+    if (typeof jQuery === 'undefined') {
+        console.error('❌ jQuery mevcut değil');
+        tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ jQuery yüklenmemiş. Lütfen sayfayı yenileyin.</div>';
+        return;
+    }
+    
+    if (typeof bkmFrontend === 'undefined') {
+        console.error('❌ bkmFrontend mevcut değil');
+        tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ Frontend ayarları yüklenmemiş. Lütfen sayfayı yenileyin.</div>';
+        return;
+    }
+    
+    console.log('🔗 AJAX parametreleri:', {
+        url: bkmFrontend.ajax_url,
+        action: 'bkm_get_tasks',
+        action_id: actionId,
+        nonce: bkmFrontend.nonce ? 'MEVCUT (' + bkmFrontend.nonce.substring(0, 6) + '...)' : 'EKSİK'
+    });
+    
+    // AJAX request to get tasks
+    jQuery.ajax({
+        url: bkmFrontend.ajax_url,
+        type: 'POST',
+        dataType: 'json',
+        timeout: 15000,
+        data: {
+            action: 'bkm_get_tasks',
+            action_id: actionId,
+            nonce: bkmFrontend.nonce
+        },
+        success: function(response) {
+            console.log('✅ AJAX yanıtı alındı:', response);
+            
+            // Ensure response is valid and has expected structure
+            if (!response) {
+                console.error('❌ Response is null or undefined');
+                tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ Sunucudan yanıt alınamadı.</div>';
+                return;
+            }
+            
+            if (response.success === true) {
+                // Handle successful response - updated to work with new response format
+                var tasks = [];
+                
+                // Check if response.data has tasks property (new format)
+                if (response.data && response.data.tasks && Array.isArray(response.data.tasks)) {
+                    tasks = response.data.tasks;
+                } 
+                // Fallback to old format where data is directly the tasks array
+                else if (response.data && Array.isArray(response.data)) {
+                    tasks = response.data;
+                } 
+                // Last fallback
+                else {
+                    tasks = [];
+                }
+                
+                console.log('📋 Bulunan görev sayısı:', tasks.length);
+                console.log('📋 Task verileri:', tasks);
+                
+                displayTasksInContainer(tasksContainer, tasks, actionId);
+            } else {
+                // Handle error response
+                console.error('❌ AJAX başarısız response:', response);
+                var errorMsg = 'Görevler yüklenirken hata oluştu.';
+                if (response.data && typeof response.data === 'string') {
+                    errorMsg = response.data;
+                } else if (response.message) {
+                    errorMsg = response.message;
+                }
+                tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ ' + errorMsg + '</div>';
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('❌ AJAX hatası:', {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                error: error,
+                responseText: xhr.responseText
+            });
+            
+            var errorMsg = 'Bağlantı hatası oluştu: ' + error;
+            if (xhr.status === 403) {
+                errorMsg = 'Bu işlemi yapmaya yetkiniz yok.';
+            } else if (xhr.status === 500) {
+                errorMsg = 'Sunucu hatası oluştu.';
+            } else if (xhr.status === 0) {
+                errorMsg = 'Bağlantı hatası. İnternet bağlantınızı kontrol edin.';
+            }
+            
+            tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ ' + errorMsg + '</div>';
+        }
+    });
+}
+
+// Display tasks in the container
+function displayTasksInContainer(container, tasks, actionId) {
+    console.log('🎯 displayTasksInContainer çağrıldı:', {
+        container: container ? 'MEVCUT' : 'EKSİK',
+        tasksCount: tasks ? tasks.length : 'NULL',
+        actionId: actionId,
+        tasks: tasks
+    });
+    
+    if (!container) {
+        console.error('❌ Container mevcut değil');
+        return;
+    }
+    
+    if (!tasks || tasks.length === 0) {
+        console.log('📝 Görev bulunamadı, empty message gösteriliyor');
+        container.innerHTML = '<h4>Görevler</h4><p style="text-align: center; padding: 20px; color: #666; font-style: italic;">Bu aksiyon için henüz görev bulunmamaktadır.</p>';
+        return;
+    }
+    
+    console.log('📋 ' + tasks.length + ' görev bulundu, HTML oluşturuluyor...');
+    
+    var html = '<h4>Görevler (' + tasks.length + ')</h4><div class="bkm-tasks-list">';
+    
+    tasks.forEach(function(task, index) {
+        console.log('🔄 Task işleniyor:', task);
+        
+        var progressValue = parseInt(task.ilerleme_durumu || task.progress || 0);
+        var isCompleted = task.tamamlandi || task.completed_at || progressValue === 100;
+        
+        // Use standardized content field from backend
+        var taskContent = task.content || task.title || task.aciklama || 'Görev içeriği mevcut değil';
+        
+        html += '<div class="bkm-task-item' + (isCompleted ? ' completed' : '') + '" data-task-id="' + task.id + '">';
+        html += '<div class="bkm-task-content">';
+        html += '<p><strong>' + escapeHtml(taskContent) + '</strong></p>';
+        
+        if (task.description && task.description.trim()) {
+            html += '<p style="margin-top: 5px; color: #666;">' + escapeHtml(task.description) + '</p>';
+        }
+        
+        html += '<div class="bkm-task-meta">';
+        html += '<span>👤 Sorumlu: ' + escapeHtml(task.sorumlu_name || 'Belirtilmemiş') + '</span>';
+        
+        if (task.baslangic_tarihi) {
+            html += '<span>📅 Başlangıç: ' + formatDate(task.baslangic_tarihi) + '</span>';
+        }
+        if (task.hedef_bitis_tarihi) {
+            html += '<span>🎯 Hedef: ' + formatDate(task.hedef_bitis_tarihi) + '</span>';
+        }
+        if (task.gercek_bitis_tarihi) {
+            html += '<span>✅ Bitiş: ' + formatDateTime(task.gercek_bitis_tarihi) + '</span>';
+        }
+        html += '</div>';
+        
+        // Progress bar
+        html += '<div class="bkm-task-progress" style="margin-top: 10px;">';
+        html += '<div class="bkm-progress" style="background: #f0f0f0; border-radius: 10px; overflow: hidden; height: 20px; position: relative;">';
+        html += '<div class="bkm-progress-bar" style="background: #28a745; height: 100%; width: ' + progressValue + '%; transition: width 0.3s ease;"></div>';
+        html += '<span class="bkm-progress-text" style="position: absolute; top: 0; left: 0; right: 0; text-align: center; line-height: 20px; font-size: 12px; font-weight: bold; color: #333;">' + progressValue + '%</span>';
+        html += '</div>';
+        html += '</div>';
+        
+        html += '</div>';
+        
+        // Task actions (if needed)
+        html += '<div class="bkm-task-actions" style="margin-top: 10px;">';
+        html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')">💬 Notlar</button>';
+        html += '</div>';
+        
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    
+    console.log('✅ HTML oluşturuldu, container\'a yazılıyor...', html.substring(0, 200) + '...');
+    container.innerHTML = html;
+    console.log('🎉 Container güncellendi!');
+}
+
+// Helper functions for date formatting
+function formatDate(dateString) {
+    if (!dateString) return '';
+    var date = new Date(dateString);
+    return date.toLocaleDateString('tr-TR');
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return '';
+    var date = new Date(dateString);
+    return date.toLocaleDateString('tr-TR') + ' ' + date.toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
+}
+
+// HTML escape function (simple version)
+function escapeHtml(text) {
+    if (typeof text !== 'string') return '';
+    var map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
 }
 
 // Görev notları fonksiyonları frontend.js'te tanımlandı - çakışmayı önlemek için buradakiler kaldırıldı
@@ -2052,5 +2346,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof loadCompanyInfo === 'function') {
         loadCompanyInfo();
     }
+    
+    // User cache'ini global olarak ayarla
+    window.usersCache = <?php echo json_encode($users_for_js); ?>;
+    console.log('👥 Users cache ayarlandı:', window.usersCache);
 });
 </script>

@@ -1,0 +1,19 @@
+# Debug and test files
+debug-*.php
+fix-*.php
+test-*.php
+
+# Temporary files
+*.tmp
+*.bak
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
