@@ -332,7 +332,10 @@ class BKM_Aksiyon_Takip {
         // Check requirements
         $this->check_requirements();
         
-        $this->create_database_tables();
+        // Force table creation and log results
+        error_log('🚀 BKM Plugin activation started');
+        $table_creation_result = $this->create_database_tables();
+        error_log('📊 BKM Table creation result: ' . ($table_creation_result ? 'SUCCESS' : 'FAILED'));
         
         // Setup role capabilities
         $this->setup_role_capabilities();
@@ -345,6 +348,8 @@ class BKM_Aksiyon_Takip {
         
         // Set activation flag
         update_option('bkm_aksiyon_takip_activated', true);
+        
+        error_log('✅ BKM Plugin activation completed');
     }
     
     /**
@@ -377,11 +382,17 @@ class BKM_Aksiyon_Takip {
         flush_rewrite_rules();
     }
     
-    /**
+/**
  * Create database tables
  */
 private function create_database_tables() {
     global $wpdb;
+    
+    // First check if WordPress database is available
+    if (!$wpdb) {
+        error_log('❌ BKM Error: WordPress database object not available during table creation');
+        return false;
+    }
     
     $charset_collate = $wpdb->get_charset_collate();
     
@@ -520,17 +531,60 @@ private function create_database_tables() {
         KEY created_by (created_by)
     ) $charset_collate;";
     
-    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-    dbDelta($actions_sql);
-    dbDelta($categories_sql);
-    dbDelta($performance_sql);
-    dbDelta($tasks_sql);
-    dbDelta($notes_sql);
-    dbDelta($user_activities_sql);
-    dbDelta($note_replies_sql);
+    // Include WordPress database upgrade functions
+    if (!function_exists('dbDelta')) {
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    }
+    
+    // Create tables with error checking
+    $results = array();
+    $results['actions'] = dbDelta($actions_sql);
+    $results['categories'] = dbDelta($categories_sql);
+    $results['performance'] = dbDelta($performance_sql);
+    $results['tasks'] = dbDelta($tasks_sql);
+    $results['notes'] = dbDelta($notes_sql);
+    $results['user_activities'] = dbDelta($user_activities_sql);
+    $results['note_replies'] = dbDelta($note_replies_sql);
+    
+    // Log results
+    foreach ($results as $table => $result) {
+        if (is_array($result) && !empty($result)) {
+            error_log("✅ BKM Table creation result for $table: " . implode(', ', $result));
+        } else {
+            error_log("❌ BKM Table creation failed for $table");
+        }
+    }
+    
+    // Verify table creation
+    $tables_created = 0;
+    $required_tables = array(
+        'bkm_actions',
+        'bkm_categories', 
+        'bkm_performances',
+        'bkm_tasks',
+        'bkm_task_notes',
+        'bkm_user_activities_logs',
+        'bkm_task_note_replies'
+    );
+    
+    foreach ($required_tables as $table_name) {
+        $full_table_name = $wpdb->prefix . $table_name;
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$full_table_name'");
+        
+        if ($table_exists) {
+            $tables_created++;
+            error_log("✅ BKM Table verified: $full_table_name");
+        } else {
+            error_log("❌ BKM Table verification failed: $full_table_name");
+        }
+    }
+    
+    error_log("🎯 BKM Database creation complete: $tables_created/" . count($required_tables) . " tables created");
     
     // Update database version
     update_option('bkm_aksiyon_takip_db_version', BKM_AKSIYON_TAKIP_VERSION);
+    
+    return $tables_created == count($required_tables);
 }
 
     /**
@@ -539,11 +593,65 @@ private function create_database_tables() {
     public function check_and_create_tables() {
         global $wpdb;
         
-        // First create tables if they don't exist
-        $this->create_database_tables();
+        // First check if WordPress database is available
+        if (!$wpdb) {
+            error_log('❌ BKM Error: WordPress database object not available');
+            return false;
+        }
+        
+        // Check if we can connect to database
+        $test_query = $wpdb->get_var("SELECT 1");
+        if ($test_query !== '1') {
+            error_log('❌ BKM Error: Database connection failed');
+            return false;
+        }
+        
+        // Check if required tables exist
+        $required_tables = array(
+            'bkm_actions',
+            'bkm_categories', 
+            'bkm_performances',
+            'bkm_tasks',
+            'bkm_task_notes',
+            'bkm_user_activities_logs',
+            'bkm_task_note_replies'
+        );
+        
+        $missing_tables = array();
+        foreach ($required_tables as $table_name) {
+            $full_table_name = $wpdb->prefix . $table_name;
+            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$full_table_name'");
+            
+            if (!$table_exists) {
+                $missing_tables[] = $table_name;
+                error_log("❌ BKM Missing table: $full_table_name");
+            } else {
+                error_log("✅ BKM Table exists: $full_table_name");
+            }
+        }
+        
+        // Create tables if they don't exist
+        if (!empty($missing_tables)) {
+            error_log("🔧 BKM Creating missing tables: " . implode(', ', $missing_tables));
+            $this->create_database_tables();
+            
+            // Verify tables were created
+            foreach ($missing_tables as $table_name) {
+                $full_table_name = $wpdb->prefix . $table_name;
+                $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$full_table_name'");
+                
+                if (!$table_exists) {
+                    error_log("❌ BKM Failed to create table: $full_table_name");
+                } else {
+                    error_log("✅ BKM Successfully created table: $full_table_name");
+                }
+            }
+        }
         
         // Then check for missing columns and add them
         $this->upgrade_database_structure();
+        
+        return true;
     }
     
     /**
@@ -552,13 +660,25 @@ private function create_database_tables() {
     private function upgrade_database_structure() {
         global $wpdb;
         
-        // Check and add progress column to bkm_task_notes table
+        // First check if table exists before trying to modify it
         $notes_table = $wpdb->prefix . 'bkm_task_notes';
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$notes_table'");
+        
+        if (!$table_exists) {
+            error_log("❌ BKM Error: Table $notes_table does not exist, skipping column upgrades");
+            return false;
+        }
+        
+        // Check and add progress column to bkm_task_notes table
         $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $notes_table LIKE 'progress'");
         
         if (empty($column_exists)) {
-            $wpdb->query("ALTER TABLE $notes_table ADD COLUMN progress int(3) DEFAULT NULL AFTER parent_note_id");
-            error_log("✅ Added progress column to $notes_table table");
+            $result = $wpdb->query("ALTER TABLE $notes_table ADD COLUMN progress int(3) DEFAULT NULL AFTER parent_note_id");
+            if ($result !== false) {
+                error_log("✅ Added progress column to $notes_table table");
+            } else {
+                error_log("❌ Failed to add progress column to $notes_table table: " . $wpdb->last_error);
+            }
         }
         
         // Check and add user_name column to bkm_task_notes table for easier querying
@@ -2056,6 +2176,13 @@ public function ajax_get_performances() {
 public function ajax_get_actions() {
     global $wpdb;
     
+    // Check if WordPress database is available
+    if (!$wpdb) {
+        error_log('❌ BKM Error: WordPress database object not available in ajax_get_actions');
+        wp_send_json_error('Veritabanı bağlantısı mevcut değil.');
+        return;
+    }
+    
     // Check if user is logged in
     if (!is_user_logged_in()) {
         wp_send_json_error('Giriş yapmalısınız.');
@@ -2078,6 +2205,14 @@ public function ajax_get_actions() {
     $actions_table = $wpdb->prefix . 'bkm_actions';
     $categories_table = $wpdb->prefix . 'bkm_categories';
     $performance_table = $wpdb->prefix . 'bkm_performances';
+    
+    // Check if actions table exists
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$actions_table'");
+    if (!$table_exists) {
+        error_log("❌ BKM Error: Table $actions_table does not exist");
+        wp_send_json_error("Aksiyonlar tablosu bulunamadı. Lütfen plugin'i yeniden aktifleştirin.");
+        return;
+    }
     
     // Debug: Same logic as dashboard.php
     $debug_show_all_actions = defined('BKM_DEBUG_SHOW_ALL_ACTIONS') && BKM_DEBUG_SHOW_ALL_ACTIONS;
@@ -2148,6 +2283,13 @@ public function ajax_get_tasks() {
     // Clean up excessive debug logging but keep essential ones
     error_log('🔧 ajax_get_tasks called for action_id: ' . ($_POST['action_id'] ?? 'not_set'));
     
+    // Check if WordPress database is available
+    if (!$wpdb) {
+        error_log('❌ BKM Error: WordPress database object not available in ajax_get_tasks');
+        wp_send_json_error('Veritabanı bağlantısı mevcut değil.');
+        return;
+    }
+    
     // Check if user is logged in
     if (!is_user_logged_in()) {
         error_log('❌ User not logged in');
@@ -2183,6 +2325,14 @@ public function ajax_get_tasks() {
     
     $table_name = $wpdb->prefix . 'bkm_tasks';
     $actions_table = $wpdb->prefix . 'bkm_actions';
+    
+    // Check if tasks table exists
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'");
+    if (!$table_exists) {
+        error_log("❌ BKM Error: Table $table_name does not exist");
+        wp_send_json_error("Görevler tablosu bulunamadı. Lütfen plugin'i yeniden aktifleştirin.");
+        return;
+    }
     
     // Initialize tasks array
     $tasks = array();

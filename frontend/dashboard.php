@@ -20,6 +20,13 @@ if (isset($_GET['bkm_logout'])) {
 
 // User is logged in, show dashboard
 global $wpdb;
+
+// Check if WordPress database is available
+if (!$wpdb) {
+    echo '<div class="bkm-error">Veritabanı bağlantısı mevcut değil. Lütfen WordPress yöneticinizle iletişime geçin.</div>';
+    return;
+}
+
 $current_user = wp_get_current_user();
 
 // Check if user has permission to view
@@ -34,6 +41,32 @@ $tasks_table = $wpdb->prefix . 'bkm_tasks';
 $notes_table = $wpdb->prefix . 'bkm_task_notes';
 $categories_table = $wpdb->prefix . 'bkm_categories';
 $performance_table = $wpdb->prefix . 'bkm_performances';
+
+// Check if required tables exist
+$required_tables = array(
+    'Aksiyonlar' => $actions_table,
+    'Görevler' => $tasks_table,
+    'Kategoriler' => $categories_table,
+    'Performans' => $performance_table
+);
+
+$missing_tables = array();
+foreach ($required_tables as $table_label => $table_name) {
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'");
+    if (!$table_exists) {
+        $missing_tables[] = $table_label;
+    }
+}
+
+if (!empty($missing_tables)) {
+    echo '<div class="bkm-error">';
+    echo '<h3>Veritabanı Tabloları Eksik</h3>';
+    echo '<p>Aşağıdaki tablolar bulunamadı: <strong>' . implode(', ', $missing_tables) . '</strong></p>';
+    echo '<p>Lütfen plugin\'i devre dışı bırakıp tekrar aktifleştirin veya sistem yöneticinizle iletişime geçin.</p>';
+    echo '<style>.bkm-error { background: #ffebcd; border: 1px solid #ff9800; padding: 15px; margin: 15px 0; border-radius: 5px; }</style>';
+    echo '</div>';
+    return;
+}
 
 // Determine SQL query based on user role - CONSISTENT WITH AJAX
 $user_roles = $current_user->roles;
