@@ -2145,10 +2145,8 @@ public function ajax_get_actions() {
 public function ajax_get_tasks() {
     global $wpdb;
     
-    // Detailed debug logging
-    error_log('🧪 ajax_get_tasks çağrıldı. POST verileri: ' . print_r($_POST, true));
-    error_log('🧪 Headers: ' . print_r(getallheaders(), true));
-    error_log('🧪 Request method: ' . $_SERVER['REQUEST_METHOD']);
+    // Clean up excessive debug logging but keep essential ones
+    error_log('🔧 ajax_get_tasks called for action_id: ' . ($_POST['action_id'] ?? 'not_set'));
     
     // Check if user is logged in
     if (!is_user_logged_in()) {
@@ -2177,11 +2175,10 @@ public function ajax_get_tasks() {
     
     $action_id = isset($_POST['action_id']) ? intval($_POST['action_id']) : 0;
     
-    error_log("🔍 Task loading parameters: action_id=$action_id, user_id=$current_user_id, is_admin=" . ($is_admin ? 'yes' : 'no') . ", is_editor=" . ($is_editor ? 'yes' : 'no'));
-    
     if ($action_id <= 0) {
         error_log('❌ Invalid action_id in ajax_get_tasks: ' . $action_id);
         wp_send_json_error('Geçersiz aksiyon ID: ' . $action_id);
+        return;
     }
     
     $table_name = $wpdb->prefix . 'bkm_tasks';
@@ -2191,12 +2188,12 @@ public function ajax_get_tasks() {
     $tasks = array();
     
     try {
-        // First, let's check if the action exists at all
+        // Check if the action exists and user has access
         $action_exists = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $actions_table WHERE id = %d", $action_id));
-        error_log("🔍 Action $action_id exists: " . ($action_exists ? 'yes' : 'no'));
         
         if (!$action_exists) {
             wp_send_json_error('Belirtilen aksiyon bulunamadı.');
+            return;
         }
         
         // Check user access to this action
@@ -2207,10 +2204,10 @@ public function ajax_get_tasks() {
                 $current_user_id,
                 '%' . $wpdb->esc_like($current_user_id) . '%'
             ));
-            error_log("🔍 Non-admin access check result: $action_access");
             
             if ($action_access === 0) {
                 wp_send_json_error('Bu aksiyonun görevlerini görme yetkiniz yok.');
+                return;
             }
         }
         
@@ -2273,8 +2270,7 @@ public function ajax_get_tasks() {
         return;
     }
     
-    error_log("✅ Returning " . count($tasks) . " tasks to frontend");
-    error_log("✅ Task data being sent: " . print_r($tasks, true));
+    error_log("✅ Returning " . count($tasks) . " tasks to frontend for action $action_id");
     
     // Ensure proper JSON response format
     wp_send_json_success(array(
