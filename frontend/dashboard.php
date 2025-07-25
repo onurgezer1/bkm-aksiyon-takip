@@ -1777,15 +1777,26 @@ function loadTasksForAction(actionId) {
             }
             
             if (response.success === true) {
-                // Handle successful response
-                var tasks = response.data || [];
-                if (Array.isArray(tasks)) {
-                    console.log('📋 Bulunan görev sayısı:', tasks.length);
-                    displayTasksInContainer(tasksContainer, tasks, actionId);
-                } else {
-                    console.error('❌ Response data array değil:', typeof tasks, tasks);
-                    tasksContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #d73027;">❌ Görev verileri beklenen formatta değil.</div>';
+                // Handle successful response - updated to work with new response format
+                var tasks = [];
+                
+                // Check if response.data has tasks property (new format)
+                if (response.data && response.data.tasks && Array.isArray(response.data.tasks)) {
+                    tasks = response.data.tasks;
+                } 
+                // Fallback to old format where data is directly the tasks array
+                else if (response.data && Array.isArray(response.data)) {
+                    tasks = response.data;
+                } 
+                // Last fallback
+                else {
+                    tasks = [];
                 }
+                
+                console.log('📋 Bulunan görev sayısı:', tasks.length);
+                console.log('📋 Task verileri:', tasks);
+                
+                displayTasksInContainer(tasksContainer, tasks, actionId);
             } else {
                 // Handle error response
                 console.error('❌ AJAX başarısız response:', response);

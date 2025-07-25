@@ -2145,12 +2145,16 @@ public function ajax_get_actions() {
 public function ajax_get_tasks() {
     global $wpdb;
     
+    // Detailed debug logging
     error_log('🧪 ajax_get_tasks çağrıldı. POST verileri: ' . print_r($_POST, true));
+    error_log('🧪 Headers: ' . print_r(getallheaders(), true));
+    error_log('🧪 Request method: ' . $_SERVER['REQUEST_METHOD']);
     
     // Check if user is logged in
     if (!is_user_logged_in()) {
         error_log('❌ User not logged in');
         wp_send_json_error('Giriş yapmalısınız.');
+        return;
     }
     
     // Verify nonce for security (temporarily more lenient for debugging)
@@ -2158,10 +2162,11 @@ public function ajax_get_tasks() {
         if (!wp_verify_nonce($_POST['nonce'], 'bkm_frontend_nonce')) {
             error_log('❌ Invalid nonce in ajax_get_tasks. Provided: ' . $_POST['nonce']);
             wp_send_json_error('Güvenlik kontrolü başarısız. Lütfen sayfayı yenileyin.');
+            return;
         }
     } else {
         error_log('⚠️ No nonce provided in ajax_get_tasks');
-        // For now, continue without nonce to debug the main issue
+        // For debugging, allow to continue
     }
     
     $current_user = wp_get_current_user();
@@ -2265,10 +2270,18 @@ public function ajax_get_tasks() {
     } catch (Exception $e) {
         error_log("❌ BKM Task Loading Error: " . $e->getMessage());
         wp_send_json_error('Görevler yüklenirken bir hata oluştu: ' . $e->getMessage());
+        return;
     }
     
     error_log("✅ Returning " . count($tasks) . " tasks to frontend");
-    wp_send_json_success($tasks);
+    error_log("✅ Task data being sent: " . print_r($tasks, true));
+    
+    // Ensure proper JSON response format
+    wp_send_json_success(array(
+        'tasks' => $tasks,
+        'count' => count($tasks),
+        'action_id' => $action_id
+    ));
 }
 
 // Action AJAX handlers
