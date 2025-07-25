@@ -2439,6 +2439,22 @@ public function ajax_add_action() {
     
     global $wpdb;
     
+    // Check if WordPress database is available
+    if (!$wpdb) {
+        error_log('❌ BKM Error: WordPress database object not available in ajax_add_action');
+        wp_send_json_error('Veritabanı bağlantısı mevcut değil.');
+        return;
+    }
+    
+    // Check if actions table exists
+    $actions_table = $wpdb->prefix . 'bkm_actions';
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$actions_table'");
+    if (!$table_exists) {
+        error_log("❌ BKM Error: Table $actions_table does not exist in ajax_add_action");
+        wp_send_json_error("Aksiyonlar tablosu bulunamadı. Lütfen plugin'i yeniden aktifleştirin.");
+        return;
+    }
+    
     // Map form fields to correct values
     $category_id = intval($_POST['kategori_id'] ?? $_POST['category_id'] ?? 0);
     $performance_id = intval($_POST['performans_id'] ?? $_POST['performance_id'] ?? 1);
@@ -2570,6 +2586,22 @@ public function ajax_add_task() {
     }
     
     global $wpdb;
+    
+    // Check if WordPress database is available
+    if (!$wpdb) {
+        error_log('❌ BKM Error: WordPress database object not available in ajax_add_task');
+        wp_send_json_error('Veritabanı bağlantısı mevcut değil.');
+        return;
+    }
+    
+    // Check if tasks table exists
+    $tasks_table = $wpdb->prefix . 'bkm_tasks';
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$tasks_table'");
+    if (!$table_exists) {
+        error_log("❌ BKM Error: Table $tasks_table does not exist in ajax_add_task");
+        wp_send_json_error("Görevler tablosu bulunamadı. Lütfen plugin'i yeniden aktifleştirin.");
+        return;
+    }
     
     // Enhanced field mapping with better fallbacks
     $action_id = intval($_POST['action_id'] ?? $_POST['aksiyon_id'] ?? 0);
