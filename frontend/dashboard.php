@@ -38,9 +38,9 @@ if (!current_user_can('read')) {
 // Force database schema update for troubleshooting
 if (defined('WP_DEBUG') && WP_DEBUG) {
     global $bkm_aksiyon_takip;
-    if ($bkm_aksiyon_takip && method_exists($bkm_aksiyon_takip, 'check_and_create_tables')) {
-        $bkm_aksiyon_takip->check_and_create_tables();
-        error_log('🔧 BKM Debug: Forced database schema update from dashboard.php');
+    if ($bkm_aksiyon_takip && method_exists($bkm_aksiyon_takip, 'force_database_schema_update')) {
+        $bkm_aksiyon_takip->force_database_schema_update();
+        error_log('🔧 BKM Debug: Forced comprehensive database schema update from dashboard.php');
     }
 }
 
@@ -2179,9 +2179,23 @@ function displayTasksInContainer(container, tasks, actionId) {
         console.log('🔍 Checking approval buttons for task ' + task.id + ':', {
             approval_status: task.approval_status,
             sorumlu_id: task.sorumlu_id,
+            sorumlu_id_type: typeof task.sorumlu_id,
             current_user_id: <?php echo $current_user_id; ?>,
+            current_user_id_type: typeof <?php echo $current_user_id; ?>,
+            sorumlu_id_int: parseInt(task.sorumlu_id),
+            condition_approval: task.approval_status === 'pending',
+            condition_user: parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>,
             condition_met: (task.approval_status === 'pending' && parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>)
         });
+        
+        // For debugging purposes, also show debug buttons in debug mode
+        <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+        if (task.approval_status === 'pending') {
+            console.log('🔧 DEBUG MODE: Adding approval buttons regardless of user check');
+            html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="approveTask(' + task.id + ')" style="margin-right: 8px;">✅ Kabul Et [DEBUG]</button>';
+            html += '<button class="bkm-btn bkm-btn-small bkm-btn-danger" onclick="rejectTask(' + task.id + ')" style="margin-right: 8px;">❌ Reddet [DEBUG]</button>';
+        }
+        <?php endif; ?>
         
         if (task.approval_status === 'pending' && parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>) {
             console.log('✅ Adding approval buttons for task ' + task.id);
@@ -2189,6 +2203,8 @@ function displayTasksInContainer(container, tasks, actionId) {
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-danger" onclick="rejectTask(' + task.id + ')" style="margin-right: 8px;">❌ Reddet</button>';
         } else {
             console.log('❌ NOT adding approval buttons for task ' + task.id + ' - condition not met');
+            console.log('  - approval_status check:', task.approval_status === 'pending');
+            console.log('  - user check:', parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>);
         }
         
         // Task history button (only for editors and admins)
@@ -2741,13 +2757,20 @@ jQuery(document).ready(function() {
 function editTask(taskId) {
     console.log('✏️ Edit task called for ID:', taskId);
     
+    // Check if bkmFrontend is available
+    if (typeof bkmFrontend === 'undefined') {
+        alert('❌ Sistem hatası: JavaScript bağlantısı başarısız. Sayfayı yenileyin.');
+        return;
+    }
+    
     // Get current task data
-    jQuery.post(bkmFrontend.ajaxurl, {
+    jQuery.post(bkmFrontend.ajax_url, {
         action: 'bkm_get_tasks',
         action_id: 0, // Will get all tasks, we'll filter on frontend
         nonce: bkmFrontend.nonce
     }, function(response) {
-        if (response.success && response.data) {
+        console.log('📬 Edit task response:', response);
+        if (response && response.success && response.data) {
             var task = response.data.find(t => t.id == taskId);
             if (task) {
                 showTaskEditModal(task);
@@ -2755,8 +2778,13 @@ function editTask(taskId) {
                 alert('Görev bulunamadı.');
             }
         } else {
-            alert('Görev bilgileri alınamadı: ' + (response.data || 'Bilinmeyen hata'));
+            var errorMsg = response && response.data ? response.data : 'Bilinmeyen hata';
+            alert('Görev bilgileri alınamadı: ' + errorMsg);
+            console.error('Edit task failed:', response);
         }
+    }).fail(function(xhr, status, error) {
+        console.error('AJAX Edit Task Error:', {xhr: xhr, status: status, error: error});
+        alert('❌ Ağ hatası: Görev bilgileri alınamadı. (' + status + ')');
     });
 }
 
@@ -2909,16 +2937,28 @@ function closeTaskEditModal(event) {
 function showTaskHistory(taskId) {
     console.log('📋 Show task history for ID:', taskId);
     
-    jQuery.post(bkmFrontend.ajaxurl, {
+    // Check if bkmFrontend is available
+    if (typeof bkmFrontend === 'undefined') {
+        alert('❌ Sistem hatası: JavaScript bağlantısı başarısız. Sayfayı yenileyin.');
+        return;
+    }
+    
+    jQuery.post(bkmFrontend.ajax_url, {
         action: 'bkm_get_task_history',
         task_id: taskId,
         nonce: bkmFrontend.nonce
     }, function(response) {
-        if (response.success) {
+        console.log('📬 Task history response:', response);
+        if (response && response.success) {
             displayTaskHistoryModal(response.data, taskId);
         } else {
-            alert('❌ Görev geçmişi alınamadı: ' + (response.data || 'Bilinmeyen hata'));
+            var errorMsg = response && response.data ? response.data : 'Bilinmeyen hata';
+            alert('❌ Görev geçmişi alınamadı: ' + errorMsg);
+            console.error('Task history failed:', response);
         }
+    }).fail(function(xhr, status, error) {
+        console.error('AJAX Task History Error:', {xhr: xhr, status: status, error: error});
+        alert('❌ Ağ hatası: Görev geçmişi alınamadı. (' + status + ')');
     });
 }
 
@@ -2977,51 +3017,88 @@ function closeTaskHistoryModal(event) {
 }
 
 function approveTask(taskId) {
+    console.log('🔄 approveTask called with ID:', taskId);
+    
     if (!confirm('Bu görevi kabul etmek istediğinizden emin misiniz?')) {
         return;
     }
     
-    jQuery.post(bkmFrontend.ajaxurl, {
+    // Check if bkmFrontend is available
+    if (typeof bkmFrontend === 'undefined') {
+        alert('❌ Sistem hatası: JavaScript bağlantısı başarısız. Sayfayı yenileyin.');
+        return;
+    }
+    
+    console.log('📡 Sending approve request...', {
+        url: bkmFrontend.ajax_url,
+        taskId: taskId,
+        nonce: bkmFrontend.nonce
+    });
+    
+    jQuery.post(bkmFrontend.ajax_url, {
         action: 'bkm_approve_task',
         task_id: taskId,
         nonce: bkmFrontend.nonce
     }, function(response) {
-        if (response.success) {
+        console.log('📬 Approve response:', response);
+        if (response && response.success) {
             alert('✅ Görev başarıyla kabul edildi!');
-            // Refresh tasks
-            refreshActions();
+            // Refresh tasks for the current action
+            location.reload();
         } else {
-            alert('❌ Hata: ' + (response.data || 'Görev kabul edilemedi'));
+            var errorMsg = response && response.data ? response.data : 'Görev kabul edilemedi';
+            alert('❌ Hata: ' + errorMsg);
+            console.error('Approval failed:', response);
         }
     }).fail(function(xhr, status, error) {
-        console.error('AJAX Approval Error:', error);
-        alert('❌ Ağ hatası: Görev onaylanamadı. Lütfen tekrar deneyin.');
+        console.error('AJAX Approval Error:', {xhr: xhr, status: status, error: error});
+        console.error('Response text:', xhr.responseText);
+        alert('❌ Ağ hatası: Görev onaylanamadı. Lütfen tekrar deneyin. (' + status + ')');
     });
 }
 
 function rejectTask(taskId) {
+    console.log('🔄 rejectTask called with ID:', taskId);
+    
     var reason = prompt('Lütfen red sebebinizi belirtiniz:');
     if (!reason || reason.trim() === '') {
         alert('Red sebebi girmeniz zorunludur.');
         return;
     }
     
-    jQuery.post(bkmFrontend.ajaxurl, {
+    // Check if bkmFrontend is available
+    if (typeof bkmFrontend === 'undefined') {
+        alert('❌ Sistem hatası: JavaScript bağlantısı başarısız. Sayfayı yenileyin.');
+        return;
+    }
+    
+    console.log('📡 Sending reject request...', {
+        url: bkmFrontend.ajax_url,
+        taskId: taskId,
+        reason: reason.trim(),
+        nonce: bkmFrontend.nonce
+    });
+    
+    jQuery.post(bkmFrontend.ajax_url, {
         action: 'bkm_reject_task',
         task_id: taskId,
         rejection_reason: reason.trim(),
         nonce: bkmFrontend.nonce
     }, function(response) {
-        if (response.success) {
+        console.log('📬 Reject response:', response);
+        if (response && response.success) {
             alert('❌ Görev başarıyla reddedildi.');
-            // Refresh tasks
-            refreshActions();
+            // Refresh tasks for the current action
+            location.reload();
         } else {
-            alert('❌ Hata: ' + (response.data || 'Görev reddedilemedi'));
+            var errorMsg = response && response.data ? response.data : 'Görev reddedilemedi';
+            alert('❌ Hata: ' + errorMsg);
+            console.error('Rejection failed:', response);
         }
     }).fail(function(xhr, status, error) {
-        console.error('AJAX Rejection Error:', error);
-        alert('❌ Ağ hatası: Görev reddedilemedi. Lütfen tekrar deneyin.');
+        console.error('AJAX Rejection Error:', {xhr: xhr, status: status, error: error});
+        console.error('Response text:', xhr.responseText);
+        alert('❌ Ağ hatası: Görev reddedilemedi. Lütfen tekrar deneyin. (' + status + ')');
     });
 }
 

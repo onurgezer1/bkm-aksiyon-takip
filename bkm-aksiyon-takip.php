@@ -3,7 +3,7 @@
  * Plugin Name: BKM AKSİYON TAKİP
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
  * Description: WordPress eklentisi ile aksiyon ve görev takip sistemi
- * Version: 1.1.2
+ * Version: 1.1.3
  * Author: Anadolu Birlik
  * Text Domain: bkm-aksiyon-takip
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BKM_AKSIYON_TAKIP_VERSION', '1.1.2');
+define('BKM_AKSIYON_TAKIP_VERSION', '1.1.3');
 define('BKM_AKSIYON_TAKIP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);
@@ -843,51 +843,113 @@ private function create_database_tables() {
     }
     
     /**
-     * Add task approval system columns if missing
+     * Force comprehensive database schema update
      */
-    private function add_task_approval_columns() {
+    public function force_database_schema_update() {
         global $wpdb;
         
+        error_log('🔧 BKM: Force database schema update initiated');
+        
         $tasks_table = $wpdb->prefix . 'bkm_tasks';
-        
-        // Check if approval_status column exists
-        $approval_status_exists = $wpdb->get_results("SHOW COLUMNS FROM $tasks_table LIKE 'approval_status'");
-        
-        if (empty($approval_status_exists)) {
-            $result = $wpdb->query("ALTER TABLE $tasks_table ADD COLUMN approval_status varchar(20) DEFAULT 'pending' AFTER status");
-            if ($result !== false) {
-                error_log("✅ Added approval_status column to $tasks_table table");
-            } else {
-                error_log("❌ Failed to add approval_status column to $tasks_table table: " . $wpdb->last_error);
-            }
-        }
-        
-        // Check if rejection_reason column exists
-        $rejection_reason_exists = $wpdb->get_results("SHOW COLUMNS FROM $tasks_table LIKE 'rejection_reason'");
-        
-        if (empty($rejection_reason_exists)) {
-            $result = $wpdb->query("ALTER TABLE $tasks_table ADD COLUMN rejection_reason text DEFAULT NULL AFTER approval_status");
-            if ($result !== false) {
-                error_log("✅ Added rejection_reason column to $tasks_table table");
-            } else {
-                error_log("❌ Failed to add rejection_reason column to $tasks_table table: " . $wpdb->last_error);
-            }
-        }
-        
-        // Ensure existing tasks have pending approval status
-        $updated_count = $wpdb->query("UPDATE $tasks_table SET approval_status = 'pending' WHERE approval_status IS NULL OR approval_status = '' OR approval_status = '0'");
-        if ($updated_count > 0) {
-            error_log("✅ Updated $updated_count existing tasks to have pending approval status");
-        }
-        
-        // Check if task history table exists
         $task_history_table = $wpdb->prefix . 'bkm_task_history';
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$task_history_table'");
         
+        // First, check if tasks table exists at all
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$tasks_table'");
         if (!$table_exists) {
+            error_log("❌ Tasks table does not exist, recreating...");
+            $this->create_tables();
+            return;
+        }
+        
+        // Get current table structure
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM $tasks_table");
+        $column_names = array();
+        foreach ($columns as $column) {
+            $column_names[] = $column->Field;
+        }
+        
+        error_log('📋 Current task table columns: ' . implode(', ', $column_names));
+        
+        // Add missing columns one by one with error handling
+        if (!in_array('approval_status', $column_names)) {
+            $result = $wpdb->query("ALTER TABLE $tasks_table ADD COLUMN approval_status varchar(20) DEFAULT 'pending'");
+            if ($result !== false) {
+                error_log("✅ Added approval_status column");
+            } else {
+                error_log("❌ Failed to add approval_status column: " . $wpdb->last_error);
+            }
+        }
+        
+        if (!in_array('rejection_reason', $column_names)) {
+            $result = $wpdb->query("ALTER TABLE $tasks_table ADD COLUMN rejection_reason text DEFAULT NULL");
+            if ($result !== false) {
+                error_log("✅ Added rejection_reason column");
+            } else {
+                error_log("❌ Failed to add rejection_reason column: " . $wpdb->last_error);
+            }
+        }
+        
+        if (!in_array('title', $column_names)) {
+            $result = $wpdb->query("ALTER TABLE $tasks_table ADD COLUMN title varchar(255) DEFAULT NULL");
+            if ($result !== false) {
+                error_log("✅ Added title column");
+            } else {
+                error_log("❌ Failed to add title column: " . $wpdb->last_error);
+            }
+        }
+        
+        // Update all existing tasks to have proper approval status
+        $update_result = $wpdb->query("UPDATE $tasks_table SET approval_status = 'pending' WHERE approval_status IS NULL OR approval_status = '' OR approval_status = '0'");
+        error_log("🔄 Updated $update_result tasks with proper approval status");
+        
+        // Create task history table if it doesn't exist
+        $history_table_exists = $wpdb->get_var("SHOW TABLES LIKE '$task_history_table'");
+        if (!$history_table_exists) {
             $charset_collate = $wpdb->get_charset_collate();
             $task_history_sql = "CREATE TABLE $task_history_table (
                 id mediumint(9) NOT NULL AUTO_INCREMENT,
+                task_id mediumint(9) NOT NULL,
+                editor_id mediumint(9) NOT NULL,
+                edit_reason text NOT NULL,
+                old_values text,
+                new_values text,
+                created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY task_id (task_id),
+                KEY editor_id (editor_id)
+            ) $charset_collate;";
+            
+            $result = $wpdb->query($task_history_sql);
+            if ($result !== false) {
+                error_log("✅ Created task history table");
+            } else {
+                error_log("❌ Failed to create task history table: " . $wpdb->last_error);
+            }
+        }
+        
+        // Verify final state
+        $final_columns = $wpdb->get_results("SHOW COLUMNS FROM $tasks_table");
+        $final_column_names = array();
+        foreach ($final_columns as $column) {
+            $final_column_names[] = $column->Field;
+        }
+        
+        error_log('📋 Final task table columns: ' . implode(', ', $final_column_names));
+        
+        // Test a simple query to make sure everything works
+        $test_query = $wpdb->get_var("SELECT COUNT(*) FROM $tasks_table");
+        error_log("🧪 Test query result: $test_query tasks found in table");
+        
+        return true;
+    }
+    
+    /**
+     * Add task approval system columns if missing
+     */
+    private function add_task_approval_columns() {
+        // Call the comprehensive update instead
+        return $this->force_database_schema_update();
+    }
                 task_id mediumint(9) NOT NULL,
                 changed_by bigint(20) UNSIGNED NOT NULL,
                 change_type varchar(50) NOT NULL,
@@ -2413,6 +2475,11 @@ public function ajax_get_tasks() {
     
     // Clean up excessive debug logging but keep essential ones
     error_log('🔧 ajax_get_tasks called for action_id: ' . ($_POST['action_id'] ?? 'not_set'));
+    
+    // Force database schema update in debug mode
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        $this->force_database_schema_update();
+    }
     
     // Check if WordPress database is available
     if (!$wpdb) {
