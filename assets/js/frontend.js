@@ -2927,8 +2927,13 @@ window.toggleReplyForm = function(taskId, noteId) {
 
         if (actions.length === 0) {
             tbody.append('<tr><td colspan="9">Henüz aksiyon bulunmamaktadır.</td></tr>');
+            // Filter dropdowns'ları da temizle
+            updateFilterDropdowns([]);
             return;
         }
+
+        // Filter dropdowns'ları güncelle
+        updateFilterDropdowns(actions);
 
         actions.forEach(function(action) {
             // Ana action row
@@ -2939,6 +2944,21 @@ window.toggleReplyForm = function(taskId, noteId) {
             row.attr('data-kategori', action.kategori_name || '');
             row.attr('data-onem', action.onem_derecesi || 1);
             row.attr('data-ilerleme', action.ilerleme_durumu || 0);
+            
+            // Sorumlu kişiler için data attribute'u hazırla
+            var sorumluNamesForData = [];
+            if (action.sorumlu_ids) {
+                var sorumluIds = action.sorumlu_ids.split(',');
+                sorumluIds.forEach(function(id) {
+                    var userId = id.trim();
+                    var user = getUserFromCache(userId);
+                    if (user) {
+                        var displayName = user.display_name || user.user_login || 'Kullanıcı ' + userId;
+                        sorumluNamesForData.push(displayName);
+                    }
+                });
+            }
+            row.attr('data-sorumlu', sorumluNamesForData.join(','));
             
             // Status hesaplama (dashboard.php logic)
             var ilerleme = parseInt(action.ilerleme_durumu || 0);
@@ -3095,6 +3115,69 @@ window.toggleReplyForm = function(taskId, noteId) {
             'BEKLEMEDE': '<span class="bkm-durum-badge beklemede">BEKLEMEDE</span>'
         };
         return badges[durum] || '<span class="bkm-durum-badge normal">NORMAL</span>';
+    }
+
+    // Filter dropdown'larını güncelleme fonksiyonu
+    function updateFilterDropdowns(actions) {
+        console.log('🔍 Filter dropdown\'ları güncelleniyor, action count:', actions.length);
+        
+        // Sorumlu kişiler listesini topla
+        var sorumluKişiler = [];
+        var kategoriler = [];
+        
+        actions.forEach(function(action) {
+            // Sorumlu kişiler
+            if (action.sorumlu_ids) {
+                var sorumluIds = action.sorumlu_ids.split(',');
+                sorumluIds.forEach(function(id) {
+                    var userId = id.trim();
+                    var user = getUserFromCache(userId);
+                    if (user) {
+                        var displayName = user.display_name || user.user_login || 'Kullanıcı ' + userId;
+                        if (sorumluKişiler.indexOf(displayName) === -1) {
+                            sorumluKişiler.push(displayName);
+                        }
+                    }
+                });
+            }
+            
+            // Kategoriler
+            if (action.kategori_name && kategoriler.indexOf(action.kategori_name) === -1) {
+                kategoriler.push(action.kategori_name);
+            }
+        });
+        
+        // Sırala
+        sorumluKişiler.sort();
+        kategoriler.sort();
+        
+        // Sorumlu kişiler dropdown'ını güncelle
+        var sorumluSelect = $('#filter-sorumlu');
+        var currentSorumluValue = sorumluSelect.val();
+        sorumluSelect.empty().append('<option value="">Tümü</option>');
+        sorumluKişiler.forEach(function(sorumlu) {
+            var option = $('<option>').val(sorumlu).text(sorumlu);
+            sorumluSelect.append(option);
+        });
+        // Önceki seçimi geri yükle (eğer hala mevcut ise)
+        if (currentSorumluValue && sorumluSelect.find('option[value="' + currentSorumluValue + '"]').length > 0) {
+            sorumluSelect.val(currentSorumluValue);
+        }
+        
+        // Kategori dropdown'ını güncelle
+        var kategoriSelect = $('#filter-kategori');
+        var currentKategoriValue = kategoriSelect.val();
+        kategoriSelect.empty().append('<option value="">Tümü</option>');
+        kategoriler.forEach(function(kategori) {
+            var option = $('<option>').val(kategori).text(kategori);
+            kategoriSelect.append(option);
+        });
+        // Önceki seçimi geri yükle (eğer hala mevcut ise)
+        if (currentKategoriValue && kategoriSelect.find('option[value="' + currentKategoriValue + '"]').length > 0) {
+            kategoriSelect.val(currentKategoriValue);
+        }
+        
+        console.log('✅ Filter dropdown\'ları güncellendi:', sorumluKişiler.length + ' sorumlu,', kategoriler.length + ' kategori');
     }
 
     // Dropdown refresh fonksiyonları
