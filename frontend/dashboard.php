@@ -2059,10 +2059,23 @@ function markTaskComplete(taskId) {
                 var actionId = response.data.action_id;
                 if (actionId) {
                     loadTasksForAction(actionId);
+                    
+                    // Also refresh the actions table to show updated progress if action progress was updated
+                    if (response.data.action_progress_updated && typeof refreshActions === 'function') {
+                        setTimeout(function() {
+                            refreshActions();
+                        }, 1000); // Small delay to ensure database update is complete
+                    }
                 }
+                
+                var message = response.data.message || 'Görev başarıyla tamamlandı!';
+                if (response.data.action_progress_updated) {
+                    message += ' (Aksiyon ilerlemesi: ' + response.data.new_action_progress + '%)';
+                }
+                
                 // Show success notification if available
                 if (typeof showNotification === 'function') {
-                    showNotification('Görev başarıyla tamamlandı!', 'success');
+                    showNotification(message, 'success');
                 }
             } else {
                 alert('Hata: ' + (response.data || 'Görev tamamlanamadı'));

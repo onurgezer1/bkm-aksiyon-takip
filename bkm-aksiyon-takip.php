@@ -2525,10 +2525,15 @@ public function ajax_complete_task() {
     
     error_log("✅ Task $task_id marked as completed by user $current_user_id");
     
+    // Update parent action progress based on all tasks
+    $new_action_progress = $this->update_action_progress_from_tasks($task_id);
+    
     wp_send_json_success(array(
         'message' => 'Görev başarıyla tamamlandı.',
         'task_id' => $task_id,
-        'action_id' => $task->action_id
+        'action_id' => $task->action_id,
+        'action_progress_updated' => $new_action_progress !== false,
+        'new_action_progress' => $new_action_progress
     ));
 }
 

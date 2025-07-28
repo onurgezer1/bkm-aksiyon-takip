@@ -2551,7 +2551,7 @@ window.loadTaskNotes = function(taskId, callback) {
                         notesHtml += '<div class="bkm-note-indicator"></div>';
                         notesHtml += '<div class="bkm-note-content-wrapper">';
                         notesHtml += '<div class="bkm-note-meta">';
-                        notesHtml += '<span class="bkm-note-author">👤 ' + (note.author_name || 'Bilinmeyen') + '</span>';
+                        notesHtml += '<span class="bkm-note-author">👤 ' + (note.user_name || note.author_name || 'Bilinmeyen') + '</span>';
                         notesHtml += '<span class="bkm-note-date">📅 ' + (note.created_at || 'Tarih yok') + '</span>';
                         notesHtml += '</div>';
                         notesHtml += '<div class="bkm-note-content">' + (note.content || '[İçerik yok]') + '</div>';
@@ -2578,7 +2578,7 @@ window.loadTaskNotes = function(taskId, callback) {
                                 notesHtml += '<div class="bkm-reply-arrow">↳</div>';
                                 notesHtml += '<div class="bkm-note-content-wrapper">';
                                 notesHtml += '<div class="bkm-note-meta">';
-                                notesHtml += '<span class="bkm-note-author">👤 ' + (reply.author_name || 'Bilinmeyen') + '</span>';
+                                notesHtml += '<span class="bkm-note-author">👤 ' + (reply.user_name || reply.author_name || 'Bilinmeyen') + '</span>';
                                 notesHtml += '<span class="bkm-note-date">📅 ' + (reply.created_at || 'Tarih yok') + '</span>';
                                 notesHtml += '<span class="bkm-reply-badge">Cevap</span>';
                                 notesHtml += '</div>';
