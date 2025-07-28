@@ -35,6 +35,15 @@ if (!current_user_can('read')) {
     return;
 }
 
+// Force database schema update for troubleshooting
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    global $bkm_aksiyon_takip;
+    if ($bkm_aksiyon_takip && method_exists($bkm_aksiyon_takip, 'check_and_create_tables')) {
+        $bkm_aksiyon_takip->check_and_create_tables();
+        error_log('🔧 BKM Debug: Forced database schema update from dashboard.php');
+    }
+}
+
 // Get data
 $actions_table = $wpdb->prefix . 'bkm_actions';
 $tasks_table = $wpdb->prefix . 'bkm_tasks';
@@ -2167,9 +2176,19 @@ function displayTasksInContainer(container, tasks, actionId) {
         html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')" style="margin-right: 8px;">💬 Notlar</button>';
         
         // Task approval buttons (only for the responsible person and pending status)
+        console.log('🔍 Checking approval buttons for task ' + task.id + ':', {
+            approval_status: task.approval_status,
+            sorumlu_id: task.sorumlu_id,
+            current_user_id: <?php echo $current_user_id; ?>,
+            condition_met: (task.approval_status === 'pending' && parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>)
+        });
+        
         if (task.approval_status === 'pending' && parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>) {
+            console.log('✅ Adding approval buttons for task ' + task.id);
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="approveTask(' + task.id + ')" style="margin-right: 8px;">✅ Kabul Et</button>';
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-danger" onclick="rejectTask(' + task.id + ')" style="margin-right: 8px;">❌ Reddet</button>';
+        } else {
+            console.log('❌ NOT adding approval buttons for task ' + task.id + ' - condition not met');
         }
         
         // Task history button (only for editors and admins)
