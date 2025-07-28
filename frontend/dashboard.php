@@ -1934,7 +1934,7 @@ function displayTasksInContainer(container, tasks, actionId) {
             html += '<div class="bkm-task-progress" style="margin-top: 12px;">';
             html += '<div class="bkm-progress" style="background: #f0f0f0; border-radius: 10px; overflow: hidden; height: 20px; position: relative;">';
             html += '<div class="bkm-progress-bar" style="background: linear-gradient(90deg, #007cba, #0085d1); height: 100%; width: ' + progressValue + '%; transition: width 0.3s ease;"></div>';
-            html += '<span class="bkm-progress-text" style="position: absolute; top: 0; left: 0; right: 0; text-align: center; line-height: 20px; font-size: 12px; font-weight: bold; color: #333;">' + progressValue + '%</span>';
+            html += '<span class="bkm-progress-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 11px; font-weight: 700; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">' + progressValue + '%</span>';
             html += '</div>';
             html += '</div>';
         } else {
@@ -1951,6 +1951,13 @@ function displayTasksInContainer(container, tasks, actionId) {
         if (!isCompleted) {
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="markTaskComplete(' + task.id + ')">✓ Tamamla</button>';
         }
+        html += '</div>';
+        
+        // Notes Section (hidden by default) - create the container that toggleNotes function expects
+        html += '<div id="notes-' + task.id + '" class="bkm-notes-section" style="display: none;">';
+        html += '<div class="bkm-notes-content">';
+        html += '<p style="text-align: center; color: #9e9e9e; font-style: italic; margin: 20px 0; padding: 30px; border: 2px dashed #e0e0e0; border-radius: 12px;">📝 Bu görev için henüz not bulunmamaktadır.</p>';
+        html += '</div>';
         html += '</div>';
         
         html += '</div>';
