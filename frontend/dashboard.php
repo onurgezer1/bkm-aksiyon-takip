@@ -1947,10 +1947,34 @@ function displayTasksInContainer(container, tasks, actionId) {
         
         // Task actions
         html += '<div class="bkm-task-actions" style="margin-top: 15px; text-align: right;">';
+        html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px;">📝 Not Ekle</button>';
         html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')" style="margin-right: 8px;">💬 Notlar</button>';
         if (!isCompleted) {
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="markTaskComplete(' + task.id + ')">✓ Tamamla</button>';
         }
+        html += '</div>';
+        
+        // Note Form (hidden by default)
+        html += '<div id="note-form-' + task.id + '" class="bkm-note-form" style="display: none;">';
+        html += '<form class="bkm-task-note-form-element">';
+        html += '<input type="hidden" name="task_id" value="' + task.id + '" />';
+        html += '<div class="bkm-note-form-row">';
+        html += '<div class="bkm-note-textarea">';
+        html += '<label for="note_content_' + task.id + '">Not İçeriği:</label>';
+        html += '<textarea name="note_content" id="note_content_' + task.id + '" rows="3" placeholder="Notunuzu buraya yazın..." required></textarea>';
+        html += '</div>';
+        html += '<div class="bkm-note-progress">';
+        html += '<label for="note_progress_' + task.id + '">İlerleme Durumu (%):</label>';
+        html += '<input type="number" name="note_progress" id="note_progress_' + task.id + '" ';
+        html += 'min="0" max="100" value="' + (task.ilerleme_durumu || 0) + '" placeholder="0-100" />';
+        html += '<small>Mevcut: ' + (task.ilerleme_durumu || 0) + '%</small>';
+        html += '</div>';
+        html += '</div>';
+        html += '<div class="bkm-form-actions">';
+        html += '<button type="submit" class="bkm-btn bkm-btn-primary bkm-btn-small">📝 Not Ekle ve İlerlemeyi Güncelle</button>';
+        html += '<button type="button" class="bkm-btn bkm-btn-secondary bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')">İptal</button>';
+        html += '</div>';
+        html += '</form>';
         html += '</div>';
         
         // Notes Section (hidden by default) - create the container that toggleNotes function expects
@@ -2061,6 +2085,33 @@ function markTaskComplete(taskId) {
             }
         }
     });
+}
+
+function toggleNoteForm(taskId) {
+    console.log('📝 toggleNoteForm çağrıldı, taskId:', taskId);
+    var noteForm = document.getElementById('note-form-' + taskId);
+    if (noteForm) {
+        if (noteForm.style.display === 'none' || noteForm.style.display === '') {
+            // Close other note forms first
+            var otherNoteForms = document.querySelectorAll('.bkm-note-form');
+            otherNoteForms.forEach(function(form) {
+                if (form.id !== 'note-form-' + taskId) {
+                    form.style.display = 'none';
+                }
+            });
+            
+            noteForm.style.display = 'block';
+            // Focus on textarea
+            var textarea = noteForm.querySelector('textarea[name="note_content"]');
+            if (textarea) {
+                textarea.focus();
+            }
+        } else {
+            noteForm.style.display = 'none';
+        }
+    } else {
+        console.error('❌ Not formu bulunamadı, ID:', 'note-form-' + taskId);
+    }
 }
 
 function toggleReplyForm(taskId, noteId) {
