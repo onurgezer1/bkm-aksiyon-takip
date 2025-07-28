@@ -1890,9 +1890,19 @@ function displayTasksInContainer(container, tasks, actionId) {
     
     tasks.forEach(function(task, index) {
         console.log('🔄 Task işleniyor:', task);
+        console.log('🔍 Task tamamlandi değeri:', task.tamamlandi, typeof task.tamamlandi);
         
         var progressValue = parseInt(task.ilerleme_durumu || task.progress || 0);
-        var isCompleted = task.tamamlandi || task.completed_at || progressValue === 100;
+        // Fix: Properly check for completion status - task.tamamlandi can be "0" or "1" as string
+        var isCompleted = (parseInt(task.tamamlandi) === 1) || task.completed_at || progressValue === 100;
+        
+        console.log('🎯 Task completion status:', {
+            tamamlandi: task.tamamlandi,
+            tamamlandi_int: parseInt(task.tamamlandi),
+            completed_at: task.completed_at,
+            progressValue: progressValue,
+            isCompleted: isCompleted
+        });
         
         // Use standardized content field from backend
         var taskContent = task.content || task.title || task.aciklama || 'Görev içeriği mevcut değil';
@@ -1901,37 +1911,46 @@ function displayTasksInContainer(container, tasks, actionId) {
         html += '<div class="bkm-task-content">';
         html += '<p><strong>' + escapeHtml(taskContent) + '</strong></p>';
         
-        if (task.description && task.description.trim()) {
-            html += '<p style="margin-top: 5px; color: #666;">' + escapeHtml(task.description) + '</p>';
+        if (task.description && task.description !== taskContent && task.description.trim()) {
+            html += '<p style="margin-top: 5px; color: #666; font-size: 14px;">' + escapeHtml(task.description) + '</p>';
         }
         
-        html += '<div class="bkm-task-meta">';
-        html += '<span>👤 Sorumlu: ' + escapeHtml(task.sorumlu_name || 'Belirtilmemiş') + '</span>';
+        html += '<div class="bkm-task-meta" style="margin-top: 8px; font-size: 13px; color: #666;">';
+        html += '<span style="margin-right: 15px;">👤 Sorumlu: <strong>' + escapeHtml(task.sorumlu_name || 'Belirtilmemiş') + '</strong></span>';
         
         if (task.baslangic_tarihi) {
-            html += '<span>📅 Başlangıç: ' + formatDate(task.baslangic_tarihi) + '</span>';
+            html += '<span style="margin-right: 15px;">📅 Başlangıç: ' + formatDate(task.baslangic_tarihi) + '</span>';
         }
         if (task.hedef_bitis_tarihi) {
-            html += '<span>🎯 Hedef: ' + formatDate(task.hedef_bitis_tarihi) + '</span>';
+            html += '<span style="margin-right: 15px;">🎯 Hedef: ' + formatDate(task.hedef_bitis_tarihi) + '</span>';
         }
         if (task.gercek_bitis_tarihi) {
-            html += '<span>✅ Bitiş: ' + formatDateTime(task.gercek_bitis_tarihi) + '</span>';
+            html += '<span style="margin-right: 15px;">✅ Bitiş: ' + formatDateTime(task.gercek_bitis_tarihi) + '</span>';
         }
         html += '</div>';
         
-        // Progress bar
-        html += '<div class="bkm-task-progress" style="margin-top: 10px;">';
-        html += '<div class="bkm-progress" style="background: #f0f0f0; border-radius: 10px; overflow: hidden; height: 20px; position: relative;">';
-        html += '<div class="bkm-progress-bar" style="background: #28a745; height: 100%; width: ' + progressValue + '%; transition: width 0.3s ease;"></div>';
-        html += '<span class="bkm-progress-text" style="position: absolute; top: 0; left: 0; right: 0; text-align: center; line-height: 20px; font-size: 12px; font-weight: bold; color: #333;">' + progressValue + '%</span>';
-        html += '</div>';
-        html += '</div>';
+        // Progress bar - only show if not completed
+        if (!isCompleted) {
+            html += '<div class="bkm-task-progress" style="margin-top: 12px;">';
+            html += '<div class="bkm-progress" style="background: #f0f0f0; border-radius: 10px; overflow: hidden; height: 20px; position: relative;">';
+            html += '<div class="bkm-progress-bar" style="background: linear-gradient(90deg, #007cba, #0085d1); height: 100%; width: ' + progressValue + '%; transition: width 0.3s ease;"></div>';
+            html += '<span class="bkm-progress-text" style="position: absolute; top: 0; left: 0; right: 0; text-align: center; line-height: 20px; font-size: 12px; font-weight: bold; color: #333;">' + progressValue + '%</span>';
+            html += '</div>';
+            html += '</div>';
+        } else {
+            html += '<div class="bkm-task-progress" style="margin-top: 12px;">';
+            html += '<div style="text-align: center; color: #28a745; font-weight: bold; font-size: 14px;">✅ Görev Tamamlandı</div>';
+            html += '</div>';
+        }
         
         html += '</div>';
         
-        // Task actions (if needed)
-        html += '<div class="bkm-task-actions" style="margin-top: 10px;">';
-        html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')">💬 Notlar</button>';
+        // Task actions
+        html += '<div class="bkm-task-actions" style="margin-top: 15px; text-align: right;">';
+        html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')" style="margin-right: 8px;">💬 Notlar</button>';
+        if (!isCompleted) {
+            html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="markTaskComplete(' + task.id + ')">✓ Tamamla</button>';
+        }
         html += '</div>';
         
         html += '</div>';
@@ -1971,6 +1990,71 @@ function escapeHtml(text) {
 }
 
 // Görev notları fonksiyonları frontend.js'te tanımlandı - çakışmayı önlemek için buradakiler kaldırıldı
+
+// Mark task as complete
+function markTaskComplete(taskId) {
+    if (!confirm('Bu görevi tamamlandı olarak işaretlemek istediğinizden emin misiniz?')) {
+        return;
+    }
+    
+    console.log('🎯 Görev tamamlanıyor, Task ID:', taskId);
+    
+    if (typeof bkmFrontend === 'undefined') {
+        alert('Sistem hatası: bkmFrontend objesi bulunamadı. Sayfayı yenileyin.');
+        return;
+    }
+    
+    jQuery.ajax({
+        url: bkmFrontend.ajax_url,
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            action: 'bkm_complete_task',
+            task_id: taskId,
+            nonce: bkmFrontend.nonce
+        },
+        beforeSend: function() {
+            // Disable the button to prevent multiple clicks
+            var btn = document.querySelector('[onclick="markTaskComplete(' + taskId + ')"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Tamamlanıyor...';
+            }
+        },
+        success: function(response) {
+            console.log('✅ Task completion response:', response);
+            if (response.success) {
+                // Refresh the tasks list to show updated status
+                var actionId = response.data.action_id;
+                if (actionId) {
+                    loadTasksForAction(actionId);
+                }
+                // Show success notification if available
+                if (typeof showNotification === 'function') {
+                    showNotification('Görev başarıyla tamamlandı!', 'success');
+                }
+            } else {
+                alert('Hata: ' + (response.data || 'Görev tamamlanamadı'));
+                // Re-enable button on error
+                var btn = document.querySelector('[onclick="markTaskComplete(' + taskId + ')"]');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '✓ Tamamla';
+                }
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('❌ Task completion error:', error);
+            alert('Bağlantı hatası: ' + error);
+            // Re-enable button on error
+            var btn = document.querySelector('[onclick="markTaskComplete(' + taskId + ')"]');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '✓ Tamamla';
+            }
+        }
+    });
+}
 
 function toggleReplyForm(taskId, noteId) {
     var replyForm = document.getElementById('reply-form-' + taskId + '-' + noteId);

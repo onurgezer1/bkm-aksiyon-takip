@@ -128,6 +128,8 @@ class BKM_Aksiyon_Takip {
         add_action('wp_ajax_nopriv_bkm_add_task', array($this, 'ajax_add_task'));
         add_action('wp_ajax_bkm_get_tasks', array($this, 'ajax_get_tasks'));
         add_action('wp_ajax_nopriv_bkm_get_tasks', array($this, 'ajax_get_tasks'));
+        add_action('wp_ajax_bkm_complete_task', array($this, 'ajax_complete_task'));
+        add_action('wp_ajax_nopriv_bkm_complete_task', array($this, 'ajax_complete_task'));
         add_action('wp_ajax_bkm_get_task_notes', array($this, 'ajax_get_task_notes'));
         add_action('wp_ajax_nopriv_bkm_get_task_notes', array($this, 'ajax_get_task_notes'));
         
@@ -2427,6 +2429,106 @@ public function ajax_get_tasks() {
         'tasks' => $tasks,
         'count' => count($tasks),
         'action_id' => $action_id
+    ));
+}
+
+// Complete task AJAX handler
+public function ajax_complete_task() {
+    global $wpdb;
+    
+    // Check if user is logged in
+    if (!is_user_logged_in()) {
+        wp_send_json_error('Giriş yapmalısınız.');
+        return;
+    }
+    
+    // Verify nonce for security
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
+        wp_send_json_error('Güvenlik kontrolü başarısız. Lütfen sayfayı yenileyin.');
+        return;
+    }
+    
+    $current_user = wp_get_current_user();
+    $current_user_id = $current_user->ID;
+    $user_roles = $current_user->roles;
+    $is_admin = in_array('administrator', $user_roles) || current_user_can('manage_options');
+    $is_editor = in_array('editor', $user_roles) || current_user_can('edit_others_posts');
+    
+    $task_id = isset($_POST['task_id']) ? intval($_POST['task_id']) : 0;
+    
+    if ($task_id <= 0) {
+        wp_send_json_error('Geçersiz görev ID.');
+        return;
+    }
+    
+    $tasks_table = $wpdb->prefix . 'bkm_tasks';
+    $actions_table = $wpdb->prefix . 'bkm_actions';
+    
+    // Get task details
+    $task = $wpdb->get_row($wpdb->prepare(
+        "SELECT t.*, a.tanımlayan_id, a.sorumlu_ids 
+         FROM $tasks_table t 
+         LEFT JOIN $actions_table a ON t.action_id = a.id 
+         WHERE t.id = %d", 
+        $task_id
+    ));
+    
+    if (!$task) {
+        wp_send_json_error('Görev bulunamadı.');
+        return;
+    }
+    
+    // Check if user has permission to complete this task
+    $can_complete = false;
+    
+    if ($is_admin || $is_editor) {
+        $can_complete = true;
+    } else {
+        // User can complete if they are responsible for the task OR the action
+        if ($task->sorumlu_id == $current_user_id || 
+            $task->tanımlayan_id == $current_user_id || 
+            (strpos($task->sorumlu_ids, (string)$current_user_id) !== false)) {
+            $can_complete = true;
+        }
+    }
+    
+    if (!$can_complete) {
+        wp_send_json_error('Bu görevi tamamlama yetkiniz yok.');
+        return;
+    }
+    
+    // Check if task is already completed
+    if ($task->tamamlandi == 1) {
+        wp_send_json_error('Bu görev zaten tamamlanmış.');
+        return;
+    }
+    
+    // Update task as completed
+    $result = $wpdb->update(
+        $tasks_table,
+        array(
+            'tamamlandi' => 1,
+            'ilerleme_durumu' => 100,
+            'gercek_bitis_tarihi' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        ),
+        array('id' => $task_id),
+        array('%d', '%d', '%s', '%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        error_log("❌ Task completion failed for task $task_id: " . $wpdb->last_error);
+        wp_send_json_error('Görev tamamlanırken veritabanı hatası oluştu.');
+        return;
+    }
+    
+    error_log("✅ Task $task_id marked as completed by user $current_user_id");
+    
+    wp_send_json_success(array(
+        'message' => 'Görev başarıyla tamamlandı.',
+        'task_id' => $task_id,
+        'action_id' => $task->action_id
     ));
 }
 
