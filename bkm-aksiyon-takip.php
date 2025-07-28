@@ -2365,7 +2365,7 @@ public function ajax_get_tasks() {
         $query = $wpdb->prepare(
             "SELECT t.id, t.action_id, 
                     COALESCE(t.content, t.title, 'Görev') as content,
-                    COALESCE(t.description, t.aciklama, '') as description,
+                    t.content as description,
                     t.baslangic_tarihi, t.hedef_bitis_tarihi, t.gercek_bitis_tarihi,
                     t.ilerleme_durumu, t.tamamlandi, t.sorumlu_id, t.created_at,
                     CASE 
