@@ -401,9 +401,21 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
     background: #ffc107 !important; 
     color: #212529 !important; 
 }
+.bkm-btn-danger {
+    background: #dc3545 !important;
+    color: #fff !important;
+}
 .bkm-btn-secondary {
     background: #6c757d !important;
     color: #fff !important;
+}
+.bkm-btn-small {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    margin-right: 4px !important;
+    margin-bottom: 4px !important;
+    display: inline-block !important;
+    visibility: visible !important;
 }
 .bkm-section-header {
     display: flex !important;
@@ -2194,6 +2206,9 @@ function displayTasksInContainer(container, tasks, actionId) {
             console.log('🔧 DEBUG MODE: Adding approval buttons regardless of user check');
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="approveTask(' + task.id + ')" style="margin-right: 8px;">✅ Kabul Et [DEBUG]</button>';
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-danger" onclick="rejectTask(' + task.id + ')" style="margin-right: 8px;">❌ Reddet [DEBUG]</button>';
+            console.log('🔧 DEBUG: Added both Kabul Et and Reddet debug buttons for task ' + task.id);
+        } else {
+            console.log('🔧 DEBUG: Not adding debug buttons - approval_status is not pending:', task.approval_status);
         }
         <?php endif; ?>
         
@@ -2212,9 +2227,15 @@ function displayTasksInContainer(container, tasks, actionId) {
         html += '<button class="bkm-btn bkm-btn-small bkm-btn-warning" onclick="showTaskHistory(' + task.id + ')" style="margin-right: 8px;">📋 Geçmiş</button>';
         <?php endif; ?>
         
-        // Edit button (only for editors and admins)
+        // Edit button (for editors, admins, and in debug mode for all users)
         <?php if ($is_editor || $is_admin): ?>
         html += '<button class="bkm-btn bkm-btn-small bkm-btn-secondary" onclick="editTask(' + task.id + ')" style="margin-right: 8px;">✏️ Düzenle</button>';
+        console.log('✅ Edit button added for user with editor/admin permissions');
+        <?php elseif (defined('WP_DEBUG') && WP_DEBUG): ?>
+        html += '<button class="bkm-btn bkm-btn-small bkm-btn-secondary" onclick="editTask(' + task.id + ')" style="margin-right: 8px;">✏️ Düzenle [DEBUG]</button>';
+        console.log('🔧 DEBUG: Edit button added for non-admin user');
+        <?php else: ?>
+        console.log('❌ Edit button NOT added - user lacks permissions. Is admin: <?php echo $is_admin ? "true" : "false"; ?>, Is editor: <?php echo $is_editor ? "true" : "false"; ?>');
         <?php endif; ?>
         
         // Complete button (only if not completed and approved)
