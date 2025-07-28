@@ -1721,7 +1721,16 @@ private function create_database_tables() {
     public function shortcode_handler($atts) {
         $atts = shortcode_atts(array(), $atts, 'aksiyon_takipx');
         
-        // Enqueue frontend scripts when shortcode is used
+        // Return placeholder message when in WordPress admin (page editor)
+        if (is_admin()) {
+            return '<div class="bkm-admin-placeholder" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 10px 0; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">' .
+                   '<h3 style="margin: 0 0 10px 0; color: white;">🎯 BKM Aksiyon Takip Sistemi</h3>' .
+                   '<p style="margin: 0; opacity: 0.9; font-size: 14px;">Bu shortcode frontend sayfasında BKM Aksiyon Takip Sistemi\'ni gösterir.<br>' .
+                   'Admin panelinde görünmez, sadece canlı sayfada çalışır.</p>' .
+                   '</div>';
+        }
+        
+        // Enqueue frontend scripts when shortcode is used (only on frontend)
         $this->frontend_enqueue_scripts();
         
         ob_start();
