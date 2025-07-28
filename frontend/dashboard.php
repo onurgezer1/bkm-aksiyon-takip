@@ -2190,6 +2190,7 @@ function displayTasksInContainer(container, tasks, actionId) {
         // Task approval buttons (only for the responsible person and pending status)
         console.log('🔍 Checking approval buttons for task ' + task.id + ':', {
             approval_status: task.approval_status,
+            approval_status_type: typeof task.approval_status,
             sorumlu_id: task.sorumlu_id,
             sorumlu_id_type: typeof task.sorumlu_id,
             current_user_id: <?php echo $current_user_id; ?>,
@@ -2197,7 +2198,10 @@ function displayTasksInContainer(container, tasks, actionId) {
             sorumlu_id_int: parseInt(task.sorumlu_id),
             condition_approval: task.approval_status === 'pending',
             condition_user: parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>,
-            condition_met: (task.approval_status === 'pending' && parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>)
+            condition_met: (task.approval_status === 'pending' && parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>),
+            wp_debug: <?php echo (defined('WP_DEBUG') && WP_DEBUG) ? 'true' : 'false'; ?>,
+            user_is_admin: <?php echo $is_admin ? 'true' : 'false'; ?>,
+            user_is_editor: <?php echo $is_editor ? 'true' : 'false'; ?>
         });
         
         // For debugging purposes, also show debug buttons in debug mode
@@ -2885,7 +2889,7 @@ function showTaskEditModal(task) {
 }
 
 function loadUsersForSelect(selectId, selectedUserId) {
-    jQuery.post(bkmFrontend.ajaxurl, {
+    jQuery.post(bkmFrontend.ajax_url, {
         action: 'bkm_get_users',
         nonce: bkmFrontend.nonce
     }, function(response) {
@@ -2923,7 +2927,7 @@ function submitTaskEdit() {
     submitBtn.innerHTML = '⏳ Kaydediliyor...';
     
     jQuery.post({
-        url: bkmFrontend.ajaxurl,
+        url: bkmFrontend.ajax_url,
         data: formData,
         processData: false,
         contentType: false,

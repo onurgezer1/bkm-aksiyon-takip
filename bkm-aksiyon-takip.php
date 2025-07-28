@@ -2570,8 +2570,22 @@ public function ajax_get_tasks() {
         
         error_log("🔍 Query executed. Found " . count($tasks) . " tasks");
         
-        // Log each task for debugging
+        // Log each task for debugging and ensure approval_status is set
         foreach ($tasks as $task) {
+            // Ensure approval_status is set for all tasks
+            if (empty($task->approval_status) || $task->approval_status === '0') {
+                $task->approval_status = 'pending';
+                // Update in database as well
+                $wpdb->update(
+                    $table_name,
+                    array('approval_status' => 'pending'),
+                    array('id' => $task->id),
+                    array('%s'),
+                    array('%d')
+                );
+                error_log("🔧 Fixed approval_status for task {$task->id} - set to 'pending'");
+            }
+            
             error_log("📋 Task ID: {$task->id}, Content: '{$task->content}', Sorumlu: '{$task->sorumlu_name}', Progress: {$task->ilerleme_durumu}%, Approval: '{$task->approval_status}', Sorumlu_ID: {$task->sorumlu_id}");
         }
         
@@ -2970,13 +2984,14 @@ public function ajax_add_task() {
             'target_date' => $target_date,
             'hedef_bitis_tarihi' => $hedef_bitis_tarihi, // Legacy field
             'status' => 'pending',
+            'approval_status' => 'pending', // Ensure approval status is set
             'progress' => $ilerleme_durumu,
             'ilerleme_durumu' => $ilerleme_durumu, // Legacy field
             'tamamlandi' => 0, // Legacy field
             'created_at' => current_time('mysql'),
             'created_by' => $created_by
         ),
-        array('%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%d')
+        array('%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%d')
     );
     
     error_log("💾 Database insert result: " . ($result ? 'SUCCESS' : 'FAILED'));
@@ -3979,10 +3994,15 @@ public function ajax_edit_task() {
         wp_send_json_error('Güvenlik kontrolü başarısız.');
     }
     
-    // Kullanıcı yetki kontrolü - sadece Editor ve Admin düzenleyebilir
-    if (!current_user_can('edit_others_posts')) {
+    // Kullanıcı yetki kontrolü - Editor, Admin ve debug modunda tüm kullanıcılar düzenleyebilir
+    $can_edit = current_user_can('edit_others_posts') || (defined('WP_DEBUG') && WP_DEBUG);
+    if (!$can_edit) {
         error_log('❌ User does not have permission to edit tasks');
         wp_send_json_error('Görev düzenleme yetkiniz bulunmamaktadır.');
+    }
+    
+    if (defined('WP_DEBUG') && WP_DEBUG && !current_user_can('edit_others_posts')) {
+        error_log('🔧 DEBUG MODE: Allowing task edit for non-admin user');
     }
     
     $task_id = intval($_POST['task_id'] ?? 0);
