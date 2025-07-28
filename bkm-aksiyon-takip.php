@@ -950,28 +950,6 @@ private function create_database_tables() {
         // Call the comprehensive update instead
         return $this->force_database_schema_update();
     }
-                task_id mediumint(9) NOT NULL,
-                changed_by bigint(20) UNSIGNED NOT NULL,
-                change_type varchar(50) NOT NULL,
-                old_values text DEFAULT NULL,
-                new_values text DEFAULT NULL,
-                change_reason text DEFAULT NULL,
-                created_at datetime DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (id),
-                KEY task_id (task_id),
-                KEY changed_by (changed_by)
-            ) $charset_collate;";
-            
-            $result = $wpdb->query($task_history_sql);
-            if ($result !== false) {
-                error_log("✅ Created task history table: $task_history_table");
-            } else {
-                error_log("❌ Failed to create task history table: " . $wpdb->last_error);
-            }
-        }
-        
-        bkm_debug_log("✅ Task approval system columns checked/added");
-    }
     
     /**
      * Update tanımlayan_id column to allow NULL and set default value
