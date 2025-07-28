@@ -3,7 +3,7 @@
  * Plugin Name: BKM AKSİYON TAKİP
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
  * Description: WordPress eklentisi ile aksiyon ve görev takip sistemi
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: Anadolu Birlik
  * Text Domain: bkm-aksiyon-takip
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BKM_AKSIYON_TAKIP_VERSION', '1.1.0');
+define('BKM_AKSIYON_TAKIP_VERSION', '1.1.1');
 define('BKM_AKSIYON_TAKIP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);
@@ -584,6 +584,24 @@ private function create_database_tables() {
             error_log("✅ BKM Table creation result for $table: " . implode(', ', $result));
         } else {
             error_log("❌ BKM Table creation failed for $table");
+        }
+    }
+    
+    // Verify critical tables exist and create them if missing
+    $critical_tables = array(
+        'bkm_task_history' => $task_history_sql,
+        'bkm_tasks' => $tasks_sql,
+        'bkm_actions' => $actions_sql
+    );
+    
+    foreach ($critical_tables as $table_suffix => $table_sql) {
+        $full_table_name = $wpdb->prefix . $table_suffix;
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$full_table_name'");
+        
+        if (!$table_exists) {
+            error_log("⚠️ Critical table missing: $full_table_name - attempting to create");
+            $create_result = dbDelta($table_sql);
+            error_log("📝 Create result: " . print_r($create_result, true));
         }
     }
     
@@ -3834,13 +3852,19 @@ public function ajax_fix_action_statuses() {
 public function ajax_edit_task() {
     global $wpdb;
     
+    // Debug logging
+    error_log('🔧 ajax_edit_task called');
+    error_log('POST data: ' . print_r($_POST, true));
+    
     // Nonce kontrolü
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
+        error_log('❌ Nonce verification failed in edit_task');
         wp_send_json_error('Güvenlik kontrolü başarısız.');
     }
     
     // Kullanıcı yetki kontrolü - sadece Editor ve Admin düzenleyebilir
     if (!current_user_can('edit_others_posts')) {
+        error_log('❌ User does not have permission to edit tasks');
         wp_send_json_error('Görev düzenleme yetkiniz bulunmamaktadır.');
     }
     
@@ -3854,6 +3878,7 @@ public function ajax_edit_task() {
     $new_progress = intval($_POST['progress'] ?? 0);
     
     if (!$task_id || empty($edit_reason)) {
+        error_log('❌ Missing task_id or edit_reason');
         wp_send_json_error('Görev ID ve düzenleme sebebi gereklidir.');
     }
     
@@ -3862,8 +3887,11 @@ public function ajax_edit_task() {
     $current_task = $wpdb->get_row($wpdb->prepare("SELECT * FROM $tasks_table WHERE id = %d", $task_id), ARRAY_A);
     
     if (!$current_task) {
+        error_log('❌ Task not found with ID: ' . $task_id);
         wp_send_json_error('Görev bulunamadı.');
     }
+    
+    error_log('📋 Found task to edit: ' . $current_task['title']);
     
     // Değişiklikleri tespit et
     $changes = array();
@@ -3907,8 +3935,11 @@ public function ajax_edit_task() {
     }
     
     if (empty($changes)) {
+        error_log('❌ No changes detected');
         wp_send_json_error('Değişiklik tespit edilmedi.');
     }
+    
+    error_log('📝 Changes detected: ' . implode(', ', $changes));
     
     // Görevi güncelle
     $update_data = array(
@@ -3925,6 +3956,7 @@ public function ajax_edit_task() {
     $result = $wpdb->update($tasks_table, $update_data, array('id' => $task_id));
     
     if ($result === false) {
+        error_log('❌ Failed to update task: ' . $wpdb->last_error);
         wp_send_json_error('Görev güncellenirken hata oluştu: ' . $wpdb->last_error);
     }
     
@@ -3932,41 +3964,68 @@ public function ajax_edit_task() {
     $history_table = $wpdb->prefix . 'bkm_task_history';
     $current_user_id = get_current_user_id();
     
-    $history_data = array(
-        'task_id' => $task_id,
-        'edited_by' => $current_user_id,
-        'edit_reason' => $edit_reason,
-        'field_changes' => implode(', ', $changes),
-        'old_values' => json_encode($old_values),
-        'new_values' => json_encode($new_values),
-        'created_at' => current_time('mysql')
-    );
+    // Check if history table exists before trying to save
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$history_table'");
+    if ($table_exists) {
+        $history_data = array(
+            'task_id' => $task_id,
+            'edited_by' => $current_user_id,
+            'edit_reason' => $edit_reason,
+            'field_changes' => implode(', ', $changes),
+            'old_values' => json_encode($old_values),
+            'new_values' => json_encode($new_values),
+            'created_at' => current_time('mysql')
+        );
+        
+        $history_result = $wpdb->insert($history_table, $history_data);
+        if ($history_result === false) {
+            error_log('⚠️ Failed to save history but task was updated: ' . $wpdb->last_error);
+        } else {
+            error_log('✅ History saved successfully');
+        }
+    } else {
+        error_log('⚠️ History table does not exist, skipping history save');
+    }
     
-    $wpdb->insert($history_table, $history_data);
-    
+    error_log('✅ Task edited successfully');
     wp_send_json_success('Görev başarıyla güncellendi ve geçmiş kaydedildi.');
 }
 
 public function ajax_get_task_history() {
     global $wpdb;
     
+    // Debug logging
+    error_log('🔧 ajax_get_task_history called');
+    error_log('POST data: ' . print_r($_POST, true));
+    
     // Nonce kontrolü
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
+        error_log('❌ Nonce verification failed in get_task_history');
         wp_send_json_error('Güvenlik kontrolü başarısız.');
     }
     
     // Kullanıcı yetki kontrolü - sadece Editor ve Admin görebilir
     if (!current_user_can('edit_others_posts')) {
+        error_log('❌ User does not have permission to view task history');
         wp_send_json_error('Görev geçmişini görme yetkiniz bulunmamaktadır.');
     }
     
     $task_id = intval($_POST['task_id'] ?? 0);
     
     if (!$task_id) {
+        error_log('❌ No task ID provided');
         wp_send_json_error('Görev ID gereklidir.');
     }
     
     $history_table = $wpdb->prefix . 'bkm_task_history';
+    
+    // Check if history table exists
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$history_table'");
+    if (!$table_exists) {
+        error_log("❌ Task history table does not exist: $history_table");
+        wp_send_json_error('Görev geçmişi tablosu bulunamadı. Plugin eksik kurulmuş olabilir.');
+        return;
+    }
     
     $history = $wpdb->get_results($wpdb->prepare("
         SELECT h.*, u.display_name as editor_name
@@ -3975,6 +4034,13 @@ public function ajax_get_task_history() {
         WHERE h.task_id = %d
         ORDER BY h.created_at DESC
     ", $task_id));
+    
+    if ($wpdb->last_error) {
+        error_log('❌ Database error in get_task_history: ' . $wpdb->last_error);
+        wp_send_json_error('Veritabanı hatası: ' . $wpdb->last_error);
+    }
+    
+    error_log('📋 Found ' . count($history) . ' history entries for task ' . $task_id);
     
     $formatted_history = array();
     foreach ($history as $entry) {
@@ -3990,14 +4056,20 @@ public function ajax_get_task_history() {
         );
     }
     
+    error_log('✅ Returning task history successfully');
     wp_send_json_success($formatted_history);
 }
 
 public function ajax_approve_task() {
     global $wpdb;
     
+    // Debug logging
+    error_log('🔧 ajax_approve_task called');
+    error_log('POST data: ' . print_r($_POST, true));
+    
     // Nonce kontrolü
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
+        error_log('❌ Nonce verification failed in approve_task');
         wp_send_json_error('Güvenlik kontrolü başarısız.');
     }
     
@@ -4005,22 +4077,37 @@ public function ajax_approve_task() {
     $current_user_id = get_current_user_id();
     
     if (!$task_id) {
+        error_log('❌ No task ID provided');
         wp_send_json_error('Görev ID gereklidir.');
+    }
+    
+    // Check if user is logged in
+    if (!$current_user_id) {
+        error_log('❌ User not logged in');
+        wp_send_json_error('Giriş yapmalısınız.');
     }
     
     // Görevin sorumlusunun kendisi olup olmadığını kontrol et
     $tasks_table = $wpdb->prefix . 'bkm_tasks';
     $task = $wpdb->get_row($wpdb->prepare("SELECT * FROM $tasks_table WHERE id = %d", $task_id));
     
+    error_log('📋 Found task: ' . ($task ? 'Yes' : 'No'));
+    if ($task) {
+        error_log('Task details - ID: ' . $task->id . ', Sorumlu: ' . $task->sorumlu_id . ', Status: ' . $task->approval_status . ', Current User: ' . $current_user_id);
+    }
+    
     if (!$task) {
+        error_log('❌ Task not found with ID: ' . $task_id);
         wp_send_json_error('Görev bulunamadı.');
     }
     
     if ($task->sorumlu_id != $current_user_id) {
+        error_log('❌ User not responsible for task. Task sorumlu: ' . $task->sorumlu_id . ', Current user: ' . $current_user_id);
         wp_send_json_error('Bu görevi sadece sorumlu kişi onaylayabilir.');
     }
     
     if ($task->approval_status === 'approved') {
+        error_log('❌ Task already approved');
         wp_send_json_error('Görev zaten onaylanmış.');
     }
     
@@ -4034,6 +4121,11 @@ public function ajax_approve_task() {
         ),
         array('id' => $task_id)
     );
+    
+    error_log('📝 Update result: ' . ($result !== false ? 'Success' : 'Failed'));
+    if ($wpdb->last_error) {
+        error_log('❌ Database error: ' . $wpdb->last_error);
+    }
     
     if ($result === false) {
         wp_send_json_error('Görev onaylanırken hata oluştu: ' . $wpdb->last_error);
@@ -4058,14 +4150,20 @@ public function ajax_approve_task() {
         wp_mail($creator->user_email, $subject, $message, array('Content-Type: text/html; charset=UTF-8'));
     }
     
+    error_log('✅ Task approved successfully');
     wp_send_json_success('Görev başarıyla onaylandı.');
 }
 
 public function ajax_reject_task() {
     global $wpdb;
     
+    // Debug logging
+    error_log('🔧 ajax_reject_task called');
+    error_log('POST data: ' . print_r($_POST, true));
+    
     // Nonce kontrolü
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
+        error_log('❌ Nonce verification failed in reject_task');
         wp_send_json_error('Güvenlik kontrolü başarısız.');
     }
     
@@ -4074,22 +4172,37 @@ public function ajax_reject_task() {
     $current_user_id = get_current_user_id();
     
     if (!$task_id || empty($rejection_reason)) {
+        error_log('❌ Missing task_id or rejection_reason');
         wp_send_json_error('Görev ID ve red sebebi gereklidir.');
+    }
+    
+    // Check if user is logged in
+    if (!$current_user_id) {
+        error_log('❌ User not logged in');
+        wp_send_json_error('Giriş yapmalısınız.');
     }
     
     // Görevin sorumlusunun kendisi olup olmadığını kontrol et
     $tasks_table = $wpdb->prefix . 'bkm_tasks';
     $task = $wpdb->get_row($wpdb->prepare("SELECT * FROM $tasks_table WHERE id = %d", $task_id));
     
+    error_log('📋 Found task: ' . ($task ? 'Yes' : 'No'));
+    if ($task) {
+        error_log('Task details - ID: ' . $task->id . ', Sorumlu: ' . $task->sorumlu_id . ', Status: ' . $task->approval_status . ', Current User: ' . $current_user_id);
+    }
+    
     if (!$task) {
+        error_log('❌ Task not found with ID: ' . $task_id);
         wp_send_json_error('Görev bulunamadı.');
     }
     
     if ($task->sorumlu_id != $current_user_id) {
+        error_log('❌ User not responsible for task. Task sorumlu: ' . $task->sorumlu_id . ', Current user: ' . $current_user_id);
         wp_send_json_error('Bu görevi sadece sorumlu kişi reddedebilir.');
     }
     
     if ($task->approval_status === 'rejected') {
+        error_log('❌ Task already rejected');
         wp_send_json_error('Görev zaten reddedilmiş.');
     }
     
@@ -4104,6 +4217,11 @@ public function ajax_reject_task() {
         ),
         array('id' => $task_id)
     );
+    
+    error_log('📝 Update result: ' . ($result !== false ? 'Success' : 'Failed'));
+    if ($wpdb->last_error) {
+        error_log('❌ Database error: ' . $wpdb->last_error);
+    }
     
     if ($result === false) {
         wp_send_json_error('Görev reddedilirken hata oluştu: ' . $wpdb->last_error);
@@ -4129,6 +4247,7 @@ public function ajax_reject_task() {
         wp_mail($creator->user_email, $subject, $message, array('Content-Type: text/html; charset=UTF-8'));
     }
     
+    error_log('✅ Task rejected successfully');
     wp_send_json_success('Görev başarıyla reddedildi.');
 }
 

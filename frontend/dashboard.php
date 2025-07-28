@@ -2166,7 +2166,7 @@ function displayTasksInContainer(container, tasks, actionId) {
         html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px;">📝 Not Ekle</button>';
         html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')" style="margin-right: 8px;">💬 Notlar</button>';
         
-        // Task approval buttons (only for the responsible person)
+        // Task approval buttons (only for the responsible person and pending status)
         if (task.approval_status === 'pending' && parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>) {
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="approveTask(' + task.id + ')" style="margin-right: 8px;">✅ Kabul Et</button>';
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-danger" onclick="rejectTask(' + task.id + ')" style="margin-right: 8px;">❌ Reddet</button>';
@@ -2962,8 +2962,6 @@ function approveTask(taskId) {
         return;
     }
     
-    console.log('✅ Approve task ID:', taskId);
-    
     jQuery.post(bkmFrontend.ajaxurl, {
         action: 'bkm_approve_task',
         task_id: taskId,
@@ -2976,6 +2974,9 @@ function approveTask(taskId) {
         } else {
             alert('❌ Hata: ' + (response.data || 'Görev kabul edilemedi'));
         }
+    }).fail(function(xhr, status, error) {
+        console.error('AJAX Approval Error:', error);
+        alert('❌ Ağ hatası: Görev onaylanamadı. Lütfen tekrar deneyin.');
     });
 }
 
@@ -2985,8 +2986,6 @@ function rejectTask(taskId) {
         alert('Red sebebi girmeniz zorunludur.');
         return;
     }
-    
-    console.log('❌ Reject task ID:', taskId, 'Reason:', reason);
     
     jQuery.post(bkmFrontend.ajaxurl, {
         action: 'bkm_reject_task',
@@ -3001,6 +3000,9 @@ function rejectTask(taskId) {
         } else {
             alert('❌ Hata: ' + (response.data || 'Görev reddedilemedi'));
         }
+    }).fail(function(xhr, status, error) {
+        console.error('AJAX Rejection Error:', error);
+        alert('❌ Ağ hatası: Görev reddedilemedi. Lütfen tekrar deneyin.');
     });
 }
 
