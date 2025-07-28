@@ -3339,6 +3339,24 @@ window.toggleReplyForm = function(taskId, noteId) {
         console.log('✅ jQuery versiyonu:', $.fn.jquery);
         console.log('🎯 BKM Container:', $('.bkm-frontend-container').length > 0 ? 'Bulundu' : 'Bulunamadı');
         
+        // Filter event listeners
+        console.log('🔍 Filtre event listener\'ları kuruluyor...');
+        
+        // Filter dropdown change events
+        $(document).on('change', '.bkm-filter-select', function() {
+            console.log('🔍 Filtre değişti:', $(this).attr('id'), '=', $(this).val());
+            applyFilters();
+        });
+        
+        // Initial filter setup
+        setTimeout(function() {
+            if ($('.bkm-filter-select').length > 0) {
+                console.log('✅ ' + $('.bkm-filter-select').length + ' filtre dropdown\'ı bulundu');
+                // Apply filters on page load if any are pre-selected
+                applyFilters();
+            }
+        }, 1000);
+        
         // Sayfa yüklendiğinde aksiyon dropdown'ını da güncelle
         if ($('#action_id').length > 0) {
             console.log('📝 Görev ekleme formu tespit edildi, aksiyon dropdown yükleniyor...');
@@ -3872,13 +3890,235 @@ console.log('🔧 Mevcut global fonksiyonlar:', {
     removeCompanyLogo: typeof window.removeCompanyLogo
 });
 
-// Filtreleri temizle fonksiyonu
+// ===== FİLTRE FONKSİYONLARI =====
+
+/**
+ * Apply filters to action table rows
+ */
+function applyFilters() {
+    console.log('🔍 applyFilters çağrıldı');
+    
+    var tanimlayanFilter = jQuery('#filter-tanimlayan').val();
+    var sorumluFilter = jQuery('#filter-sorumlu').val();
+    var kategoriFilter = jQuery('#filter-kategori').val();
+    var onemFilter = jQuery('#filter-onem').val();
+    var durumFilter = jQuery('#filter-durum').val();
+    
+    console.log('🔍 Aktif filtreler:', {
+        tanimlayan: tanimlayanFilter,
+        sorumlu: sorumluFilter,
+        kategori: kategoriFilter,
+        onem: onemFilter,
+        durum: durumFilter
+    });
+    
+    var visibleCount = 0;
+    var totalCount = 0;
+    
+    // Her action row'unu kontrol et
+    jQuery('.bkm-table tbody tr').each(function() {
+        var row = jQuery(this);
+        
+        // Skip detail rows (action details, tasks, etc.)
+        if (row.hasClass('bkm-action-details-row') || row.hasClass('bkm-tasks-row')) {
+            return; // continue
+        }
+        
+        totalCount++;
+        
+        var rowTanimlayan = row.attr('data-tanimlayan') || '';
+        var rowSorumlu = row.attr('data-sorumlu') || '';
+        var rowKategori = row.attr('data-kategori') || '';
+        var rowOnem = row.attr('data-onem') || '';
+        var rowDurum = row.attr('data-durum') || '';
+        
+        var isVisible = true;
+        
+        // Tanımlayan filtresi
+        if (tanimlayanFilter && tanimlayanFilter !== '') {
+            if (rowTanimlayan !== tanimlayanFilter) {
+                isVisible = false;
+            }
+        }
+        
+        // Sorumlu kişi filtresi
+        if (sorumluFilter && sorumluFilter !== '') {
+            // Sorumlu kişi data-sorumlu'da virgülle ayrılmış isimler olarak bulunuyor
+            var sorumluNames = rowSorumlu.split(',').map(function(name) {
+                return name.trim();
+            });
+            
+            if (sorumluNames.indexOf(sorumluFilter) === -1) {
+                isVisible = false;
+            }
+        }
+        
+        // Kategori filtresi
+        if (kategoriFilter && kategoriFilter !== '') {
+            if (rowKategori !== kategoriFilter) {
+                isVisible = false;
+            }
+        }
+        
+        // Önem filtresi
+        if (onemFilter && onemFilter !== '') {
+            if (rowOnem !== onemFilter) {
+                isVisible = false;
+            }
+        }
+        
+        // Durum filtresi
+        if (durumFilter && durumFilter !== '') {
+            if (rowDurum !== durumFilter) {
+                isVisible = false;
+            }
+        }
+        
+        // Row'u göster/gizle
+        if (isVisible) {
+            row.removeClass('filtered-out').show();
+            visibleCount++;
+        } else {
+            row.addClass('filtered-out').hide();
+        }
+    });
+    
+    console.log('✅ Filtreleme tamamlandı:', visibleCount + '/' + totalCount + ' aksiyon görünüyor');
+    
+    // Active filters display güncellemesi
+    updateActiveFiltersDisplay();
+    
+    // Notification göster
+    if (totalCount > 0) {
+        var message = visibleCount + ' / ' + totalCount + ' aksiyon görüntüleniyor';
+        if (visibleCount === 0) {
+            message = 'Hiçbir aksiyon filtrelere uymuyor';
+        }
+        showNotification(message, visibleCount > 0 ? 'info' : 'warning');
+    }
+}
+
+/**
+ * Update active filters display
+ */
+function updateActiveFiltersDisplay() {
+    var activeFilters = [];
+    var activeFiltersContainer = jQuery('#active-filters');
+    var activeFiltersList = jQuery('#active-filters-list');
+    
+    // Check each filter and collect active ones
+    var tanimlayanFilter = jQuery('#filter-tanimlayan').val();
+    var sorumluFilter = jQuery('#filter-sorumlu').val();
+    var kategoriFilter = jQuery('#filter-kategori').val();
+    var onemFilter = jQuery('#filter-onem').val();
+    var durumFilter = jQuery('#filter-durum').val();
+    
+    if (tanimlayanFilter) {
+        activeFilters.push({
+            label: '👤 Tanımlayan: ' + tanimlayanFilter,
+            type: 'tanimlayan',
+            value: tanimlayanFilter
+        });
+    }
+    
+    if (sorumluFilter) {
+        activeFilters.push({
+            label: '👥 Sorumlu: ' + sorumluFilter,
+            type: 'sorumlu',
+            value: sorumluFilter
+        });
+    }
+    
+    if (kategoriFilter) {
+        activeFilters.push({
+            label: '🏷️ Kategori: ' + kategoriFilter,
+            type: 'kategori',
+            value: kategoriFilter
+        });
+    }
+    
+    if (onemFilter) {
+        var onemLabels = {1: 'Düşük', 2: 'Orta', 3: 'Yüksek'};
+        activeFilters.push({
+            label: '⚡ Önem: ' + (onemLabels[onemFilter] || onemFilter),
+            type: 'onem',
+            value: onemFilter
+        });
+    }
+    
+    if (durumFilter) {
+        var durumLabels = {open: 'AÇIK', active: 'DEVAM EDİYOR', completed: 'TAMAMLANDI'};
+        activeFilters.push({
+            label: '📊 Durum: ' + (durumLabels[durumFilter] || durumFilter),
+            type: 'durum',
+            value: durumFilter
+        });
+    }
+    
+    if (activeFilters.length > 0) {
+        var html = '';
+        activeFilters.forEach(function(filter) {
+            html += '<span class="bkm-filter-tag">';
+            html += filter.label;
+            html += '<button class="bkm-filter-tag-close" onclick="removeFilter(\'' + filter.type + '\')">&times;</button>';
+            html += '</span>';
+        });
+        
+        activeFiltersList.html(html);
+        activeFiltersContainer.show();
+    } else {
+        activeFiltersContainer.hide();
+    }
+}
+
+/**
+ * Remove a specific filter
+ */
+function removeFilter(filterType) {
+    console.log('🗑️ Filtre kaldırılıyor:', filterType);
+    
+    switch(filterType) {
+        case 'tanimlayan':
+            jQuery('#filter-tanimlayan').val('');
+            break;
+        case 'sorumlu':
+            jQuery('#filter-sorumlu').val('');
+            break;
+        case 'kategori':
+            jQuery('#filter-kategori').val('');
+            break;
+        case 'onem':
+            jQuery('#filter-onem').val('');
+            break;
+        case 'durum':
+            jQuery('#filter-durum').val('');
+            break;
+    }
+    
+    // Filtreleri yeniden uygula
+    applyFilters();
+}
+
+/**
+ * Clear all filters
+ */
 function clearAllFilters() {
+    console.log('🗑️ Tüm filtreler temizleniyor');
+    
     jQuery('#filter-tanimlayan').val('');
     jQuery('#filter-sorumlu').val('');
     jQuery('#filter-kategori').val('');
     jQuery('#filter-onem').val('');
     jQuery('#filter-durum').val('');
-    jQuery('.bkm-filter-select').trigger('change');
+    
+    // Filtreleri uygula (tümünü gösterir)
+    applyFilters();
+    
+    showNotification('Tüm filtreler temizlendi', 'success');
 }
+
+// Global olarak erişilebilir yap
+window.applyFilters = applyFilters;
+window.updateActiveFiltersDisplay = updateActiveFiltersDisplay;
+window.removeFilter = removeFilter;
 window.clearAllFilters = clearAllFilters;

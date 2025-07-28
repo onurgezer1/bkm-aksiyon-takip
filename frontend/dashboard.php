@@ -1412,6 +1412,18 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                         $status = 'completed';
                                     }
                                 }
+
+                                // Sorumlu kişi isimlerini hazırla
+                                $sorumlu_ids = explode(',', $action->sorumlu_ids);
+                                $sorumlu_names = array();
+                                foreach ($sorumlu_ids as $sorumlu_id) {
+                                    $user = get_user_by('ID', trim($sorumlu_id));
+                                    if ($user) {
+                                        $full_name = trim($user->first_name . ' ' . $user->last_name);
+                                        $display_name = !empty($full_name) ? $full_name : $user->display_name;
+                                        $sorumlu_names[] = $display_name;
+                                    }
+                                }
                                 ?>
                                 <tr data-tanimlayan="<?php echo esc_attr($action->tanımlayan_name); ?>" 
                                     data-kategori="<?php echo esc_attr($action->kategori_name); ?>" 
@@ -1422,18 +1434,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                     <td><?php echo $action->id; ?></td>
                                     <td><?php echo esc_html($action->tanımlayan_name ?: 'Bilinmiyor'); ?></td>
                                     <td>
-                                        <?php 
-                                        $sorumlu_ids = explode(',', $action->sorumlu_ids);
-                                        $sorumlu_names = array();
-                                        foreach ($sorumlu_ids as $sorumlu_id) {
-                                            $user = get_user_by('ID', trim($sorumlu_id));
-                                            if ($user) {
-                                                $full_name = trim($user->first_name . ' ' . $user->last_name);
-                                                $display_name = !empty($full_name) ? $full_name : $user->display_name;
-                                                $sorumlu_names[] = $display_name;
-                                            }
-                                        }
-                                        ?>
                                         <div class="bkm-responsible-users-elegant">
                                             <?php foreach ($sorumlu_names as $index => $name): ?>
                                                 <div class="bkm-user-chip">
