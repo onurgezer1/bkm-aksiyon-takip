@@ -3321,7 +3321,7 @@ function showRejectTaskModal(taskId) {
     modal.className = 'bkm-modal';
     modal.innerHTML = `
         <div class="bkm-modal-backdrop" style="background: rgba(0,0,0,0.5);">
-            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;">
+            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto; border: 1px solid #ddd;">
                 <div class="bkm-modal-header" style="padding: 20px 24px; border-bottom: 1px solid #eee; position: sticky; top: 0; background: white; z-index: 1;">
                     <h3 style="margin: 0; color: #d32f2f; display: flex; align-items: center; gap: 8px;">❌ Görevi Reddet</h3>
                     <button class="bkm-modal-close" onclick="closeBkmModal()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
@@ -3336,9 +3336,9 @@ function showRejectTaskModal(taskId) {
                         Red sebebi girmeniz zorunludur.
                     </div>
                 </div>
-                <div class="bkm-modal-footer" style="display: flex; gap: 12px; justify-content: flex-end; padding: 20px; border-top: 1px solid #eee; background: #f8f9fa;">
-                    <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()" style="padding: 12px 24px; border: 1px solid #ddd; background: #fff; color: #333; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 80px;">İptal</button>
-                    <button class="bkm-btn bkm-btn-danger" id="bkm-reject-confirm-btn" style="padding: 14px 28px; background: #dc3545; color: white; border: 2px solid #dc3545; border-radius: 6px; cursor: pointer; font-weight: 600; min-width: 100px; font-size: 14px;">Onayla</button>
+                <div class="bkm-modal-footer" style="display: flex !important; gap: 12px; justify-content: flex-end; padding: 20px; border-top: 1px solid #eee; background: #f8f9fa; flex-wrap: nowrap;">
+                    <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()" style="padding: 12px 24px; border: 1px solid #ddd; background: #fff; color: #333; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 80px; margin-right: 8px;">İptal</button>
+                    <button class="bkm-btn bkm-btn-danger bkm-reject-confirm-button" id="bkm-reject-confirm-btn" style="padding: 14px 28px !important; background: #dc3545 !important; color: white !important; border: 2px solid #dc3545 !important; border-radius: 6px; cursor: pointer; font-weight: 600; min-width: 100px; font-size: 14px; display: inline-block !important; visibility: visible !important; opacity: 1 !important;">Onayla</button>
                 </div>
             </div>
         </div>
@@ -3363,8 +3363,30 @@ function showRejectTaskModal(taskId) {
         document.getElementById('rejection-reason').focus();
     }, 100);
     
-    // Event handlers
-    document.getElementById('bkm-reject-confirm-btn').addEventListener('click', function() {
+    // Enhanced button event handler with debugging
+    setTimeout(function() {
+        var confirmBtn = document.getElementById('bkm-reject-confirm-btn');
+        console.log('🔧 Confirm button found:', confirmBtn);
+        
+        if (confirmBtn) {
+            // Remove any existing listeners
+            confirmBtn.removeEventListener('click', handleRejectConfirm);
+            
+            // Add new listener
+            confirmBtn.addEventListener('click', handleRejectConfirm);
+            console.log('✅ Confirm button event listener attached');
+            
+            // Make sure button is visible
+            confirmBtn.style.display = 'inline-block';
+            confirmBtn.style.visibility = 'visible';
+            confirmBtn.style.opacity = '1';
+        } else {
+            console.error('❌ Confirm button not found!');
+        }
+    }, 200);
+    
+    function handleRejectConfirm() {
+        console.log('🚀 Reject confirm button clicked');
         var reason = document.getElementById('rejection-reason').value.trim();
         var errorDiv = document.getElementById('rejection-error');
         
@@ -3379,7 +3401,7 @@ function showRejectTaskModal(taskId) {
         
         // Proceed with rejection
         submitTaskRejection(taskId, reason);
-    });
+    }
     
     // Close on backdrop click
     modal.querySelector('.bkm-modal-backdrop').addEventListener('click', function(e) {
@@ -3431,7 +3453,74 @@ function submitTaskRejection(taskId, reason) {
 
 function newRejectTask(taskId) {
     console.log('🚀 NEW: Reject task called for ID:', taskId);
-    showRejectTaskModal(taskId);
+    showSimpleRejectModal(taskId);
+}
+
+function showSimpleRejectModal(taskId) {
+    // Remove existing modals
+    var existingModals = document.querySelectorAll('.bkm-modal, .bkm-reject-modal');
+    existingModals.forEach(function(modal) { modal.remove(); });
+    
+    // Create a simple, guaranteed-to-work modal
+    var modalHTML = `
+        <div class="bkm-reject-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99999; display: flex; align-items: center; justify-content: center;">
+            <div style="background: white; border-radius: 8px; width: 90%; max-width: 600px; border: 2px solid #ddd; margin: 20px;">
+                <!-- Header -->
+                <div style="padding: 20px 24px; border-bottom: 1px solid #eee; background: #f8f9fa; position: relative;">
+                    <h3 style="margin: 0; color: #d32f2f; font-size: 18px;">❌ Görevi Reddet</h3>
+                    <button onclick="closeRejectModal()" style="position: absolute; top: 20px; right: 24px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+                </div>
+                
+                <!-- Body -->
+                <div style="padding: 24px;">
+                    <p style="margin: 0 0 15px 0; color: #333; font-size: 14px;">Bu görevi neden reddediyorsunuz? Lütfen sebebini açıklayın:</p>
+                    <textarea id="simple-rejection-reason" 
+                             placeholder="Red sebebinizi buraya yazın..." 
+                             style="width: 100%; height: 120px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical; font-size: 14px; box-sizing: border-box;"
+                             required></textarea>
+                    <div id="simple-rejection-error" style="color: #d32f2f; margin-top: 10px; display: none; font-size: 14px;">
+                        Red sebebi girmeniz zorunludur.
+                    </div>
+                </div>
+                
+                <!-- Footer with clearly visible buttons -->
+                <div style="padding: 20px; border-top: 1px solid #eee; background: #f8f9fa; text-align: right;">
+                    <button onclick="closeRejectModal()" style="padding: 12px 24px; margin-right: 12px; border: 1px solid #ddd; background: #fff; color: #333; border-radius: 6px; cursor: pointer; font-weight: 500;">İptal</button>
+                    <button onclick="confirmRejectTask(${taskId})" style="padding: 14px 28px; background: #dc3545; color: white; border: 2px solid #dc3545; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">Onayla</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Focus on textarea
+    setTimeout(function() {
+        var textarea = document.getElementById('simple-rejection-reason');
+        if (textarea) textarea.focus();
+    }, 100);
+}
+
+function closeRejectModal() {
+    var modal = document.querySelector('.bkm-reject-modal');
+    if (modal) modal.remove();
+}
+
+function confirmRejectTask(taskId) {
+    var reason = document.getElementById('simple-rejection-reason').value.trim();
+    var errorDiv = document.getElementById('simple-rejection-error');
+    
+    if (!reason) {
+        errorDiv.style.display = 'block';
+        document.getElementById('simple-rejection-reason').focus();
+        return;
+    }
+    
+    errorDiv.style.display = 'none';
+    closeRejectModal();
+    
+    // Proceed with rejection
+    submitTaskRejection(taskId, reason);
 }
 
 function showEditTaskModal(taskId) {
@@ -3475,7 +3564,7 @@ function showEditModalWithData(taskId, task, users) {
     modal.className = 'bkm-modal';
     modal.innerHTML = `
         <div class="bkm-modal-backdrop" style="background: rgba(0,0,0,0.5);">
-            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto;">
+            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; border: 1px solid #ddd;">
                 <div class="bkm-modal-header" style="padding: 20px 24px; border-bottom: 1px solid #eee; position: sticky; top: 0; background: white; z-index: 1;">
                     <h3 style="margin: 0; color: #333; display: flex; align-items: center; gap: 8px;">✏️ Görevi Düzenle</h3>
                     <button class="bkm-modal-close" onclick="closeBkmModal()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
