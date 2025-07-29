@@ -2186,13 +2186,20 @@ function displayTasksInContainer(container, tasks, actionId) {
         // Task actions
         html += '<div class="bkm-task-actions" style="margin-top: 15px; text-align: right;">';
         
-        // Note buttons - only for approved tasks
+        // Note buttons - Enhanced logic with better user feedback
         if (canPerformOperations) {
             html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px;">📝 Not Ekle</button>';
+            console.log('✅ Added active note button for approved task ' + task.id);
         } else if (isPending) {
             html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px; cursor: not-allowed;" disabled title="Görevi önce onaylamalısınız">📝 Not Ekle (Beklemede)</button>';
+            console.log('⏳ Added disabled note button for pending task ' + task.id);
         } else if (isRejected) {
             html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px; cursor: not-allowed;" disabled title="Reddedilen görevlere not eklenemez">📝 Not Ekle (Reddedildi)</button>';
+            console.log('❌ Added disabled note button for rejected task ' + task.id);
+        } else {
+            // Fallback for tasks with unknown approval status
+            html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px; background: #ffc107; color: #212529;" title="Durum belirsiz - Not eklemeyi deneyin">📝 Not Ekle (?)</button>';
+            console.log('⚠️ Added fallback note button for task ' + task.id + ' with unknown approval status: ' + task.approval_status);
         }
         
         // Notes viewing is always available
@@ -2213,6 +2220,16 @@ function displayTasksInContainer(container, tasks, actionId) {
         var canPerformOperations = (task.approval_status === 'approved');
         var isPending = (task.approval_status === 'pending');
         var isRejected = (task.approval_status === 'rejected');
+        
+        // Enhanced debugging for task state
+        console.log('🔍 Task ' + task.id + ' state analysis:', {
+            approval_status: task.approval_status,
+            canPerformOperations: canPerformOperations,
+            isPending: isPending,
+            isRejected: isRejected,
+            sorumlu_id: task.sorumlu_id,
+            current_user_id: <?php echo $current_user_id; ?>
+        });
         
         // Show approval/rejection buttons only for pending tasks
         if (isPending) {
@@ -2250,9 +2267,11 @@ function displayTasksInContainer(container, tasks, actionId) {
         
         html += '</div>';
         
-        // Note Form (hidden by default) - Only for approved tasks
+        // Note Form (hidden by default) - Enhanced to show for all tasks but with restrictions
+        html += '<div id="note-form-' + task.id + '" class="bkm-note-form" style="display: none;">';
+        
         if (canPerformOperations) {
-            html += '<div id="note-form-' + task.id + '" class="bkm-note-form" style="display: none;">';
+            // Full note form for approved tasks
             html += '<form class="bkm-task-note-form-element">';
             html += '<input type="hidden" name="task_id" value="' + task.id + '" />';
             html += '<div class="bkm-note-form-row">';
@@ -2272,16 +2291,24 @@ function displayTasksInContainer(container, tasks, actionId) {
             html += '<button type="button" class="bkm-btn bkm-btn-secondary bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')">İptal</button>';
             html += '</div>';
             html += '</form>';
+            console.log('✅ Added full note form for approved task ' + task.id);
+        } else {
+            // Restricted message for non-approved tasks
+            html += '<div class="bkm-task-restriction" style="background: #fff3cd; color: #856404; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #ffeaa7; text-align: center;">';
+            if (isPending) {
+                html += '⏳ Bu göreve not ekleyebilmek için önce görevi <strong>onaylamalısınız</strong>.';
+            } else if (isRejected) {
+                html += '❌ Reddedilen görevlere not eklenemez.';
+            } else {
+                html += '❓ Bu görevin durumu belirsiz. Lütfen sayfayı yenileyin.';
+            }
+            html += '<br><button type="button" class="bkm-btn bkm-btn-secondary bkm-btn-small" style="margin-top: 10px;" onclick="toggleNoteForm(' + task.id + ')">Kapat</button>';
             html += '</div>';
-        } else if (isPending) {
-            html += '<div class="bkm-task-restriction" style="background: #fff3cd; color: #856404; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px solid #ffeaa7; text-align: center;">';
-            html += '⏳ Bu göreve not ekleyebilmek için önce görevi onaylamalısınız.';
-            html += '</div>';
-        } else if (isRejected) {
-            html += '<div class="bkm-task-restriction" style="background: #f8d7da; color: #721c24; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px solid #f5c6cb; text-align: center;">';
-            html += '❌ Reddedilen görevlere not eklenemez.';
-            html += '</div>';
+            console.log('⚠️ Added restriction message for task ' + task.id + ' in state: ' + task.approval_status);
         }
+        
+        html += '</div>';
+        console.log('📝 Note form container added for task ' + task.id);
         
         // Notes Section (hidden by default) - show for all tasks
         html += '<div id="notes-' + task.id + '" class="bkm-notes-section" style="display: none;">';
@@ -3324,7 +3351,7 @@ function showRejectTaskModal(taskId) {
                 </div>
                 <div class="bkm-modal-footer">
                     <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()">İptal</button>
-                    <button class="bkm-btn bkm-btn-danger" id="bkm-reject-confirm-btn" style="background: #d32f2f;">Reddet</button>
+                    <button class="bkm-btn bkm-btn-danger" id="bkm-reject-confirm-btn" style="background: #d32f2f;">Onayla</button>
                 </div>
             </div>
         </div>
@@ -3628,8 +3655,8 @@ function showTaskHistoryModal(taskId, history) {
         history.forEach(function(entry) {
             historyHtml += '<div style="border-left: 3px solid #007cba; padding: 15px; margin: 15px 0; background: #f8f9fa; border-radius: 4px;">';
             historyHtml += '<div style="font-weight: 600; color: #333; margin-bottom: 8px;">' + (entry.action_type || 'Düzenleme') + '</div>';
-            historyHtml += '<div style="color: #666; font-size: 14px; margin-bottom: 5px;">👤 <strong>Kullanıcı:</strong> ' + (entry.user_name || 'Bilinmiyor') + '</div>';
-            historyHtml += '<div style="color: #666; font-size: 14px; margin-bottom: 8px;">📅 <strong>Tarih:</strong> ' + (entry.created_at || 'Bilinmiyor') + '</div>';
+            historyHtml += '<div style="color: #666; font-size: 14px; margin-bottom: 5px;">👤 <strong>Kullanıcı:</strong> ' + (entry.editor_name || 'Bilinmiyor') + '</div>';
+            historyHtml += '<div style="color: #666; font-size: 14px; margin-bottom: 8px;">📅 <strong>Tarih:</strong> ' + (entry.created_date || entry.created_at || 'Bilinmiyor') + '</div>';
             
             if (entry.edit_reason) {
                 historyHtml += '<div style="color: #333; margin-bottom: 8px;"><strong>Sebep:</strong> ' + entry.edit_reason + '</div>';
@@ -3639,10 +3666,33 @@ function showTaskHistoryModal(taskId, history) {
                 historyHtml += '<div style="color: #333; margin-bottom: 8px;"><strong>Değişen Alanlar:</strong> ' + entry.field_changes + '</div>';
             }
             
-            if (entry.old_value || entry.new_value) {
-                historyHtml += '<div style="color: #333;"><strong>Değişiklik:</strong> ';
-                historyHtml += '<span style="color: #d32f2f;">' + (entry.old_value || 'Yok') + '</span> → ';
-                historyHtml += '<span style="color: #2e7d32;">' + (entry.new_value || 'Yok') + '</span>';
+            // Enhanced old and new values display
+            if (entry.old_values || entry.new_values) {
+                var oldVals = entry.old_values || {};
+                var newVals = entry.new_values || {};
+                
+                historyHtml += '<div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 8px 0;">';
+                historyHtml += '<strong>Değişiklik Detayları:</strong><br>';
+                
+                // Display changes for each field
+                Object.keys(newVals).forEach(function(field) {
+                    var oldVal = oldVals[field] || 'Yok';
+                    var newVal = newVals[field] || 'Yok';
+                    if (oldVal !== newVal) {
+                        var fieldName = field === 'content' ? 'İçerik' : 
+                                       field === 'title' ? 'Başlık' :
+                                       field === 'ilerleme_durumu' ? 'İlerleme' :
+                                       field === 'hedef_bitis_tarihi' ? 'Hedef Tarihi' :
+                                       field === 'baslangic_tarihi' ? 'Başlangıç Tarihi' :
+                                       field === 'sorumlu_id' ? 'Sorumlu' : field;
+                        
+                        historyHtml += '<div style="margin: 5px 0;">';
+                        historyHtml += '<strong>' + fieldName + ':</strong> ';
+                        historyHtml += '<span style="color: #d32f2f; text-decoration: line-through;">' + oldVal + '</span> → ';
+                        historyHtml += '<span style="color: #2e7d32; font-weight: bold;">' + newVal + '</span>';
+                        historyHtml += '</div>';
+                    }
+                });
                 historyHtml += '</div>';
             }
             
