@@ -3,7 +3,7 @@
  * Plugin Name: BKM AKSİYON TAKİP
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
  * Description: WordPress eklentisi ile aksiyon ve görev takip sistemi
- * Version: 1.2.1
+ * Version: 1.2.2
  * Author: Anadolu Birlik
  * Text Domain: bkm-aksiyon-takip
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BKM_AKSIYON_TAKIP_VERSION', '1.2.1');
+define('BKM_AKSIYON_TAKIP_VERSION', '1.2.2');
 define('BKM_AKSIYON_TAKIP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);

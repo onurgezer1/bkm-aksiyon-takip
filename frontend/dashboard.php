@@ -355,7 +355,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
     background: #fff !important;
     padding: 30px !important;
     border-radius: 8px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
 }
 .bkm-table { 
     width: 100% !important; 
@@ -363,7 +362,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
     border-collapse: collapse !important; 
     border-radius: 8px !important; 
     overflow: hidden !important; 
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important; 
     margin: 20px 0 !important;
 }
 .bkm-table th, .bkm-table td { 
@@ -492,7 +490,7 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
 }
 @keyframes progressPulse {
     0% { background-color: #007cba; }
-    50% { background-color: #28a745; box-shadow: 0 0 10px rgba(40, 167, 69, 0.5); }
+    50% { background-color: #28a745; }
     100% { background-color: #007cba; }
 }
 .bkm-note-progress-update {
@@ -521,7 +519,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
 }
 .action-completed .bkm-progress-bar {
     background: linear-gradient(90deg, #28a745 0%, #20c997 100%) !important;
-    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3) !important;
 }
 
 /* Yeni durum renkleri */
@@ -587,13 +584,11 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
     border-radius: 16px !important;
     font-size: 11px !important;
     font-weight: 500 !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     transition: all 0.2s ease !important;
 }
 
 .bkm-user-chip:hover {
     transform: translateY(-1px) !important;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
 }
 
 .bkm-user-avatar {
@@ -633,7 +628,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
     font-weight: 600 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     transition: all 0.2s ease !important;
     min-width: 110px !important;
     justify-content: center !important;
@@ -641,7 +635,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
 
 .bkm-status-elegant:hover {
     transform: translateY(-1px) !important;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
 }
 
 .bkm-status-elegant.status-open {
@@ -674,7 +667,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
     border: 1px solid #e9ecef !important;
     border-radius: 8px !important;
     margin-bottom: 20px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
     overflow: hidden !important;
 }
 
@@ -734,7 +726,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
 
 .bkm-filter-select:focus {
     border-color: #667eea !important;
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1) !important;
     outline: none !important;
 }
 
@@ -829,7 +820,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
     margin: 40px auto;
     background: #fff;
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     padding: 32px;
     position: relative;
     display: none;
@@ -862,7 +852,6 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
 .bkm-modal-content {
     background: #fff !important;
     border-radius: 8px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
     max-width: 600px !important;
     width: 90% !important;
     max-height: 90vh !important;
@@ -1086,7 +1075,7 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                             <button class="bkm-btn bkm-btn-info" onclick="toggleReportsDropdown(event)">
                                 📊 Raporlar
                             </button>
-                            <div id="bkm-reports-dropdown" class="bkm-reports-dropdown" style="display:none; position:static; width:100%; max-width:1200px; margin:40px auto; background:#fff; border-radius:10px; box-shadow:0 4px 24px rgba(0,0,0,0.12); z-index:1000; padding:32px;">
+                            <div id="bkm-reports-dropdown" class="bkm-reports-dropdown" style="display:none; position:static; width:100%; max-width:1200px; margin:40px auto; background:#fff; border-radius:10px; z-index:1000; padding:32px;">
                                 <button onclick="toggleReportsDropdown(event)" class="bkm-btn bkm-btn-secondary bkm-btn-small" style="position:absolute; top:16px; right:16px;">❌ Kapat</button>
                                 <?php include BKM_AKSIYON_TAKIP_PLUGIN_DIR . 'admin/pages/reports.php'; ?>
                             </div>
@@ -3093,7 +3082,6 @@ function showInPageNotification(message, type = 'info', duration = 5000) {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-size: 14px;
         font-weight: 500;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         z-index: 10000;
         cursor: pointer;
         transition: all 0.3s ease;
@@ -3205,7 +3193,6 @@ function showConfirmationModal(title, message, onConfirm, onCancel) {
             width: 100%;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
             animation: bkm-modal-in 0.3s ease;
         }
         .bkm-modal-header {
@@ -3334,7 +3321,7 @@ function showRejectTaskModal(taskId) {
     modal.className = 'bkm-modal';
     modal.innerHTML = `
         <div class="bkm-modal-backdrop" style="background: rgba(0,0,0,0.5);">
-            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 600px; width: 95%; max-height: 85vh; box-shadow: 0 4px 20px rgba(0,0,0,0.15); overflow-y: auto;">
+            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;">
                 <div class="bkm-modal-header" style="padding: 20px 24px; border-bottom: 1px solid #eee; position: sticky; top: 0; background: white; z-index: 1;">
                     <h3 style="margin: 0; color: #d32f2f; display: flex; align-items: center; gap: 8px;">❌ Görevi Reddet</h3>
                     <button class="bkm-modal-close" onclick="closeBkmModal()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
@@ -3351,7 +3338,7 @@ function showRejectTaskModal(taskId) {
                 </div>
                 <div class="bkm-modal-footer" style="display: flex; gap: 12px; justify-content: flex-end; padding: 20px; border-top: 1px solid #eee; background: #f8f9fa;">
                     <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()" style="padding: 12px 24px; border: 1px solid #ddd; background: #fff; color: #333; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 80px;">İptal</button>
-                    <button class="bkm-btn bkm-btn-danger" id="bkm-reject-confirm-btn" style="padding: 12px 24px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 80px; box-shadow: 0 2px 4px rgba(220,53,69,0.2);">Onayla</button>
+                    <button class="bkm-btn bkm-btn-danger" id="bkm-reject-confirm-btn" style="padding: 14px 28px; background: #dc3545; color: white; border: 2px solid #dc3545; border-radius: 6px; cursor: pointer; font-weight: 600; min-width: 100px; font-size: 14px;">Onayla</button>
                 </div>
             </div>
         </div>
@@ -3488,7 +3475,7 @@ function showEditModalWithData(taskId, task, users) {
     modal.className = 'bkm-modal';
     modal.innerHTML = `
         <div class="bkm-modal-backdrop" style="background: rgba(0,0,0,0.5);">
-            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto;">
                 <div class="bkm-modal-header" style="padding: 20px 24px; border-bottom: 1px solid #eee; position: sticky; top: 0; background: white; z-index: 1;">
                     <h3 style="margin: 0; color: #333; display: flex; align-items: center; gap: 8px;">✏️ Görevi Düzenle</h3>
                     <button class="bkm-modal-close" onclick="closeBkmModal()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
@@ -3551,7 +3538,7 @@ function showEditModalWithData(taskId, task, users) {
                 </div>
                 <div class="bkm-modal-footer" style="display: flex; gap: 12px; justify-content: flex-end; padding: 20px; border-top: 1px solid #eee; background: #f8f9fa;">
                     <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()" style="padding: 12px 24px; border: 1px solid #ddd; background: #fff; color: #333; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 100px;">İptal</button>
-                    <button class="bkm-btn bkm-btn-primary" id="bkm-edit-submit-btn" style="padding: 12px 24px; background: #007cba; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 150px; box-shadow: 0 2px 4px rgba(0,124,186,0.2);">Düzenlemeyi Kaydet</button>
+                    <button class="bkm-btn bkm-btn-primary" id="bkm-edit-submit-btn" style="padding: 12px 24px; background: #007cba; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 150px;">Düzenlemeyi Kaydet</button>
                 </div>
             </div>
         </div>
