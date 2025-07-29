@@ -2186,8 +2186,16 @@ function displayTasksInContainer(container, tasks, actionId) {
         // Task actions
         html += '<div class="bkm-task-actions" style="margin-top: 15px; text-align: right;">';
         
-        // Note and Notes buttons (always available)
-        html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px;">📝 Not Ekle</button>';
+        // Note buttons - only for approved tasks
+        if (canPerformOperations) {
+            html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px;">📝 Not Ekle</button>';
+        } else if (isPending) {
+            html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px; cursor: not-allowed;" disabled title="Görevi önce onaylamalısınız">📝 Not Ekle (Beklemede)</button>';
+        } else if (isRejected) {
+            html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px; cursor: not-allowed;" disabled title="Reddedilen görevlere not eklenemez">📝 Not Ekle (Reddedildi)</button>';
+        }
+        
+        // Notes viewing is always available
         html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')" style="margin-right: 8px;">💬 Notlar</button>';
         
         // NEW SIMPLIFIED APPROACH: Always show action buttons for better debugging
@@ -2201,57 +2209,81 @@ function displayTasksInContainer(container, tasks, actionId) {
         
         // SIMPLIFIED APPROVAL BUTTONS - Show if task is pending
         var approvalStatus = task.approval_status || 'pending';
-        var taskSorumluId = parseInt(task.sorumlu_id) || 0;
-        var currentUserId = <?php echo $current_user_id; ?>;
+        // TASK STATE MANAGEMENT: Control access based on approval status
+        var canPerformOperations = (task.approval_status === 'approved');
+        var isPending = (task.approval_status === 'pending');
+        var isRejected = (task.approval_status === 'rejected');
         
-        if (approvalStatus === 'pending') {
+        // Show approval/rejection buttons only for pending tasks
+        if (isPending) {
             console.log('✅ Adding approval buttons for pending task ' + task.id);
             html += '<button class="bkm-btn bkm-btn-small" style="background: #28a745; color: white; margin-right: 8px;" onclick="newApproveTask(' + task.id + ')">✅ Kabul Et</button>';
             html += '<button class="bkm-btn bkm-btn-small" style="background: #dc3545; color: white; margin-right: 8px;" onclick="newRejectTask(' + task.id + ')">❌ Reddet</button>';
-        } else {
-            console.log('ℹ️ Task ' + task.id + ' not pending, status: ' + approvalStatus);
+        } else if (task.approval_status === 'approved') {
+            html += '<span class="bkm-status-badge" style="background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-right: 8px;">✅ Onaylandı</span>';
+        } else if (isRejected) {
+            html += '<span class="bkm-status-badge" style="background: #f8d7da; color: #721c24; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-right: 8px;">❌ Reddedildi</span>';
+            if (task.rejection_reason) {
+                html += '<span class="bkm-rejection-reason" style="font-size: 12px; color: #666; font-style: italic;" title="Red Sebebi: ' + task.rejection_reason + '">(' + task.rejection_reason.substring(0, 30) + (task.rejection_reason.length > 30 ? '...' : '') + ')</span>';
+            }
         }
         
-        // SIMPLIFIED HISTORY AND EDIT BUTTONS - Show for admins/editors or in debug mode
+        // SIMPLIFIED HISTORY AND EDIT BUTTONS - Show for admins/editors or in debug mode (only for approved/pending tasks)
         <?php if ($is_editor || $is_admin || (defined('WP_DEBUG') && WP_DEBUG)): ?>
-        html += '<button class="bkm-btn bkm-btn-small" style="background: #ffc107; color: #212529; margin-right: 8px;" onclick="newShowTaskHistory(' + task.id + ')">📋 Geçmiş</button>';
-        html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px;" onclick="newEditTask(' + task.id + ')">✏️ Düzenle</button>';
-        console.log('✅ Added history and edit buttons for privileged user or debug mode');
+        if (!isRejected) { // Don't show edit/history for rejected tasks
+            html += '<button class="bkm-btn bkm-btn-small" style="background: #ffc107; color: #212529; margin-right: 8px;" onclick="newShowTaskHistory(' + task.id + ')">📋 Geçmiş</button>';
+            html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px;" onclick="newEditTask(' + task.id + ')">✏️ Düzenle</button>';
+            console.log('✅ Added history and edit buttons for privileged user or debug mode');
+        }
         <?php else: ?>
         console.log('ℹ️ History and edit buttons not added - insufficient permissions');
         <?php endif; ?>
         
-        // Complete button (only if not completed and approved)
-        if (!isCompleted && (task.approval_status === 'approved' || task.approval_status === 'pending')) {
+        // Complete button (only for approved tasks that are not completed)
+        if (!isCompleted && canPerformOperations) {
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="markTaskComplete(' + task.id + ')">✓ Tamamla</button>';
+        } else if (isPending && !isCompleted) {
+            html += '<span class="bkm-status-info" style="color: #856404; font-size: 12px; font-style: italic;">⏳ Görev onaylandıktan sonra işlem yapabilirsiniz</span>';
+        } else if (isRejected) {
+            html += '<span class="bkm-status-info" style="color: #721c24; font-size: 12px; font-style: italic;">❌ Reddedilen görevlerde işlem yapılamaz</span>';
         }
         
         html += '</div>';
         
-        // Note Form (hidden by default)
-        html += '<div id="note-form-' + task.id + '" class="bkm-note-form" style="display: none;">';
-        html += '<form class="bkm-task-note-form-element">';
-        html += '<input type="hidden" name="task_id" value="' + task.id + '" />';
-        html += '<div class="bkm-note-form-row">';
-        html += '<div class="bkm-note-textarea">';
-        html += '<label for="note_content_' + task.id + '">Not İçeriği:</label>';
-        html += '<textarea name="note_content" id="note_content_' + task.id + '" rows="3" placeholder="Notunuzu buraya yazın..." required></textarea>';
-        html += '</div>';
-        html += '<div class="bkm-note-progress">';
-        html += '<label for="note_progress_' + task.id + '">İlerleme Durumu (%):</label>';
-        html += '<input type="number" name="note_progress" id="note_progress_' + task.id + '" ';
-        html += 'min="0" max="100" value="' + (task.ilerleme_durumu || 0) + '" placeholder="0-100" />';
-        html += '<small>Mevcut: ' + (task.ilerleme_durumu || 0) + '%</small>';
-        html += '</div>';
-        html += '</div>';
-        html += '<div class="bkm-form-actions">';
-        html += '<button type="submit" class="bkm-btn bkm-btn-primary bkm-btn-small">📝 Not Ekle ve İlerlemeyi Güncelle</button>';
-        html += '<button type="button" class="bkm-btn bkm-btn-secondary bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')">İptal</button>';
-        html += '</div>';
-        html += '</form>';
-        html += '</div>';
+        // Note Form (hidden by default) - Only for approved tasks
+        if (canPerformOperations) {
+            html += '<div id="note-form-' + task.id + '" class="bkm-note-form" style="display: none;">';
+            html += '<form class="bkm-task-note-form-element">';
+            html += '<input type="hidden" name="task_id" value="' + task.id + '" />';
+            html += '<div class="bkm-note-form-row">';
+            html += '<div class="bkm-note-textarea">';
+            html += '<label for="note_content_' + task.id + '">Not İçeriği:</label>';
+            html += '<textarea name="note_content" id="note_content_' + task.id + '" rows="3" placeholder="Notunuzu buraya yazın..." required></textarea>';
+            html += '</div>';
+            html += '<div class="bkm-note-progress">';
+            html += '<label for="note_progress_' + task.id + '">İlerleme Durumu (%):</label>';
+            html += '<input type="number" name="note_progress" id="note_progress_' + task.id + '" ';
+            html += 'min="0" max="100" value="' + (task.ilerleme_durumu || 0) + '" placeholder="0-100" />';
+            html += '<small>Mevcut: ' + (task.ilerleme_durumu || 0) + '%</small>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="bkm-form-actions">';
+            html += '<button type="submit" class="bkm-btn bkm-btn-primary bkm-btn-small">📝 Not Ekle ve İlerlemeyi Güncelle</button>';
+            html += '<button type="button" class="bkm-btn bkm-btn-secondary bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')">İptal</button>';
+            html += '</div>';
+            html += '</form>';
+            html += '</div>';
+        } else if (isPending) {
+            html += '<div class="bkm-task-restriction" style="background: #fff3cd; color: #856404; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px solid #ffeaa7; text-align: center;">';
+            html += '⏳ Bu göreve not ekleyebilmek için önce görevi onaylamalısınız.';
+            html += '</div>';
+        } else if (isRejected) {
+            html += '<div class="bkm-task-restriction" style="background: #f8d7da; color: #721c24; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px solid #f5c6cb; text-align: center;">';
+            html += '❌ Reddedilen görevlere not eklenemez.';
+            html += '</div>';
+        }
         
-        // Notes Section (hidden by default) - create the container that toggleNotes function expects
+        // Notes Section (hidden by default) - show for all tasks
         html += '<div id="notes-' + task.id + '" class="bkm-notes-section" style="display: none;">';
         html += '<div class="bkm-notes-content">';
         html += '<p style="text-align: center; color: #9e9e9e; font-style: italic; margin: 20px 0; padding: 30px; border: 2px dashed #e0e0e0; border-radius: 12px;">📝 Bu görev için henüz not bulunmamaktadır.</p>';
@@ -3013,55 +3045,344 @@ function displayTaskHistoryModal(history, taskId) {
 }
 
 // NEW SIMPLIFIED TASK ACTION FUNCTIONS
-function newApproveTask(taskId) {
-    console.log('🚀 NEW: Approve task called for ID:', taskId);
+// IN-PAGE NOTIFICATION SYSTEM
+function showInPageNotification(message, type = 'info', duration = 5000) {
+    // Remove existing notifications
+    var existing = document.querySelectorAll('.bkm-notification');
+    existing.forEach(function(el) { el.remove(); });
     
-    if (!confirm('Bu görevi kabul etmek istediğinizden emin misiniz?')) {
-        return;
+    var notification = document.createElement('div');
+    notification.className = 'bkm-notification bkm-notification-' + type;
+    notification.innerHTML = '<div class="bkm-notification-content">' + message + '</div>';
+    
+    // Add styles
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        max-width: 400px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        transform: translateX(100%);
+    `;
+    
+    // Type-specific colors
+    var colors = {
+        success: { bg: '#d4edda', text: '#155724', border: '#c3e6cb' },
+        error: { bg: '#f8d7da', text: '#721c24', border: '#f5c6cb' },
+        warning: { bg: '#fff3cd', text: '#856404', border: '#ffeaa7' },
+        info: { bg: '#d1ecf1', text: '#0c5460', border: '#bee5eb' }
+    };
+    
+    var color = colors[type] || colors.info;
+    notification.style.backgroundColor = color.bg;
+    notification.style.color = color.text;
+    notification.style.border = '1px solid ' + color.border;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(function() {
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Auto remove
+    if (duration > 0) {
+        setTimeout(function() {
+            if (notification.parentNode) {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(function() {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }
+        }, duration);
     }
     
-    // Simple AJAX call with basic error handling
-    jQuery.ajax({
-        url: '<?php echo admin_url('admin-ajax.php'); ?>',
-        type: 'POST',
-        dataType: 'json',
-        data: {
-            action: 'bkm_approve_task',
-            task_id: taskId,
-            nonce: '<?php echo wp_create_nonce('bkm_frontend_nonce'); ?>'
-        },
-        success: function(response) {
-            console.log('✅ NEW: Approve response:', response);
-            if (response && response.success) {
-                alert('✅ Görev başarıyla kabul edildi!');
-                // Reload tasks to show updated status
-                var actionId = getCurrentActionId();
-                if (actionId) {
-                    loadTasksForAction(actionId);
-                }
-            } else {
-                var errorMsg = response && response.data ? response.data : 'Bilinmeyen hata';
-                alert('❌ Hata: ' + errorMsg);
-                console.error('Approve error:', response);
+    // Click to remove
+    notification.addEventListener('click', function() {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(function() {
+            if (notification.parentNode) {
+                notification.remove();
             }
-        },
-        error: function(xhr, status, error) {
-            console.error('❌ NEW: Approve AJAX error:', error, xhr.responseText);
-            alert('❌ Bağlantı hatası: ' + error);
+        }, 300);
+    });
+}
+
+// MODAL SYSTEM
+function showConfirmationModal(title, message, onConfirm, onCancel) {
+    // Remove existing modals
+    var existingModals = document.querySelectorAll('.bkm-modal');
+    existingModals.forEach(function(modal) { modal.remove(); });
+    
+    var modal = document.createElement('div');
+    modal.className = 'bkm-modal';
+    modal.innerHTML = `
+        <div class="bkm-modal-backdrop">
+            <div class="bkm-modal-content">
+                <div class="bkm-modal-header">
+                    <h3>${title}</h3>
+                    <button class="bkm-modal-close" onclick="closeBkmModal()">&times;</button>
+                </div>
+                <div class="bkm-modal-body">
+                    <p>${message}</p>
+                </div>
+                <div class="bkm-modal-footer">
+                    <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()">İptal</button>
+                    <button class="bkm-btn bkm-btn-primary" id="bkm-confirm-btn">Onayla</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add styles
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Add modal styles
+    var style = document.createElement('style');
+    style.textContent = `
+        .bkm-modal-backdrop {
+            background: rgba(0,0,0,0.5);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .bkm-modal-content {
+            background: white;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            animation: bkm-modal-in 0.3s ease;
+        }
+        .bkm-modal-header {
+            padding: 20px 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .bkm-modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+        .bkm-modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .bkm-modal-body {
+            padding: 20px;
+        }
+        .bkm-modal-footer {
+            padding: 0 20px 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .bkm-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .bkm-btn-primary {
+            background: #007cba;
+            color: white;
+        }
+        .bkm-btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        @keyframes bkm-modal-in {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Event handlers
+    document.getElementById('bkm-confirm-btn').addEventListener('click', function() {
+        closeBkmModal();
+        if (onConfirm) onConfirm();
+    });
+    
+    // Close on backdrop click
+    modal.querySelector('.bkm-modal-backdrop').addEventListener('click', function(e) {
+        if (e.target === e.currentTarget) {
+            closeBkmModal();
+            if (onCancel) onCancel();
         }
     });
 }
 
-function newRejectTask(taskId) {
-    console.log('🚀 NEW: Reject task called for ID:', taskId);
+function closeBkmModal() {
+    var modals = document.querySelectorAll('.bkm-modal');
+    modals.forEach(function(modal) { modal.remove(); });
+}
+
+function newApproveTask(taskId) {
+    console.log('🚀 NEW: Approve task called for ID:', taskId);
     
-    var reason = prompt('Lütfen red sebebinizi belirtiniz:');
-    if (!reason || reason.trim() === '') {
-        alert('Red sebebi girmeniz zorunludur.');
-        return;
-    }
+    showConfirmationModal(
+        '✅ Görevi Kabul Et',
+        'Bu görevi kabul etmek istediğinizden emin misiniz?',
+        function() {
+            // Confirmed - proceed with approval
+            jQuery.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'bkm_approve_task',
+                    task_id: taskId,
+                    nonce: '<?php echo wp_create_nonce('bkm_frontend_nonce'); ?>'
+                },
+                success: function(response) {
+                    console.log('✅ NEW: Approve response:', response);
+                    if (response && response.success) {
+                        showInPageNotification('✅ Görev başarıyla kabul edildi!', 'success');
+                        // Reload tasks to show updated status
+                        var actionId = getCurrentActionId();
+                        if (actionId) {
+                            loadTasksForAction(actionId);
+                        }
+                    } else {
+                        var errorMsg = response && response.data ? response.data : 'Bilinmeyen hata';
+                        showInPageNotification('❌ Hata: ' + errorMsg, 'error');
+                        console.error('Approve error:', response);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('❌ NEW: Approve AJAX error:', error, xhr.responseText);
+                    showInPageNotification('❌ Bağlantı hatası: ' + error, 'error');
+                }
+            });
+        }
+    );
+}
+
+function showRejectTaskModal(taskId) {
+    // Remove existing modals
+    var existingModals = document.querySelectorAll('.bkm-modal');
+    existingModals.forEach(function(modal) { modal.remove(); });
     
-    // Simple AJAX call with basic error handling
+    var modal = document.createElement('div');
+    modal.className = 'bkm-modal';
+    modal.innerHTML = `
+        <div class="bkm-modal-backdrop">
+            <div class="bkm-modal-content">
+                <div class="bkm-modal-header">
+                    <h3>❌ Görevi Reddet</h3>
+                    <button class="bkm-modal-close" onclick="closeBkmModal()">&times;</button>
+                </div>
+                <div class="bkm-modal-body">
+                    <p>Bu görevi neden reddediyorsunuz? Lütfen sebebini açıklayın:</p>
+                    <textarea id="rejection-reason" 
+                             placeholder="Red sebebinizi buraya yazın..." 
+                             style="width: 100%; height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical;"
+                             required></textarea>
+                    <div id="rejection-error" style="color: #d32f2f; margin-top: 10px; display: none;">
+                        Red sebebi girmeniz zorunludur.
+                    </div>
+                </div>
+                <div class="bkm-modal-footer">
+                    <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()">İptal</button>
+                    <button class="bkm-btn bkm-btn-danger" id="bkm-reject-confirm-btn" style="background: #d32f2f;">Reddet</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Focus on textarea
+    setTimeout(function() {
+        document.getElementById('rejection-reason').focus();
+    }, 100);
+    
+    // Event handlers
+    document.getElementById('bkm-reject-confirm-btn').addEventListener('click', function() {
+        var reason = document.getElementById('rejection-reason').value.trim();
+        var errorDiv = document.getElementById('rejection-error');
+        
+        if (!reason) {
+            errorDiv.style.display = 'block';
+            document.getElementById('rejection-reason').focus();
+            return;
+        }
+        
+        errorDiv.style.display = 'none';
+        closeBkmModal();
+        
+        // Proceed with rejection
+        submitTaskRejection(taskId, reason);
+    });
+    
+    // Close on backdrop click
+    modal.querySelector('.bkm-modal-backdrop').addEventListener('click', function(e) {
+        if (e.target === e.currentTarget) {
+            closeBkmModal();
+        }
+    });
+    
+    // Enter key in textarea submits (with Ctrl/Cmd)
+    document.getElementById('rejection-reason').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            document.getElementById('bkm-reject-confirm-btn').click();
+        }
+    });
+}
+
+function submitTaskRejection(taskId, reason) {
     jQuery.ajax({
         url: '<?php echo admin_url('admin-ajax.php'); ?>',
         type: 'POST',
@@ -3069,13 +3390,13 @@ function newRejectTask(taskId) {
         data: {
             action: 'bkm_reject_task',
             task_id: taskId,
-            rejection_reason: reason.trim(),
+            rejection_reason: reason,
             nonce: '<?php echo wp_create_nonce('bkm_frontend_nonce'); ?>'
         },
         success: function(response) {
             console.log('✅ NEW: Reject response:', response);
             if (response && response.success) {
-                alert('✅ Görev başarıyla reddedildi!');
+                showInPageNotification('✅ Görev başarıyla reddedildi!', 'success');
                 // Reload tasks to show updated status
                 var actionId = getCurrentActionId();
                 if (actionId) {
@@ -3083,21 +3404,184 @@ function newRejectTask(taskId) {
                 }
             } else {
                 var errorMsg = response && response.data ? response.data : 'Bilinmeyen hata';
-                alert('❌ Hata: ' + errorMsg);
+                showInPageNotification('❌ Hata: ' + errorMsg, 'error');
                 console.error('Reject error:', response);
             }
         },
         error: function(xhr, status, error) {
             console.error('❌ NEW: Reject AJAX error:', error, xhr.responseText);
-            alert('❌ Bağlantı hatası: ' + error);
+            showInPageNotification('❌ Bağlantı hatası: ' + error, 'error');
+        }
+    });
+}
+
+function newRejectTask(taskId) {
+    console.log('🚀 NEW: Reject task called for ID:', taskId);
+    showRejectTaskModal(taskId);
+}
+
+function showEditTaskModal(taskId) {
+    // First, get task details
+    jQuery.ajax({
+        url: '<?php echo admin_url('admin-ajax.php'); ?>',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            action: 'bkm_get_task_details',
+            task_id: taskId,
+            nonce: '<?php echo wp_create_nonce('bkm_frontend_nonce'); ?>'
+        },
+        success: function(response) {
+            if (response && response.success && response.data) {
+                var task = response.data;
+                showEditModalWithData(taskId, task);
+            } else {
+                showInPageNotification('❌ Görev bilgileri alınamadı', 'error');
+            }
+        },
+        error: function() {
+            showInPageNotification('❌ Bağlantı hatası', 'error');
+        }
+    });
+}
+
+function showEditModalWithData(taskId, task) {
+    // Remove existing modals
+    var existingModals = document.querySelectorAll('.bkm-modal');
+    existingModals.forEach(function(modal) { modal.remove(); });
+    
+    var modal = document.createElement('div');
+    modal.className = 'bkm-modal';
+    modal.innerHTML = `
+        <div class="bkm-modal-backdrop">
+            <div class="bkm-modal-content" style="max-width: 600px;">
+                <div class="bkm-modal-header">
+                    <h3>✏️ Görevi Düzenle</h3>
+                    <button class="bkm-modal-close" onclick="closeBkmModal()">&times;</button>
+                </div>
+                <div class="bkm-modal-body">
+                    <form id="edit-task-form">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Görev Başlığı:</label>
+                            <input type="text" id="edit-task-title" value="${task.title || ''}" 
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Görev İçeriği:</label>
+                            <textarea id="edit-task-content" 
+                                     style="width: 100%; height: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                                     >${task.content || ''}</textarea>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">İlerleme Durumu (%):</label>
+                            <input type="number" id="edit-task-progress" value="${task.progress || 0}" 
+                                   min="0" max="100"
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Düzenleme Sebebi:</label>
+                            <textarea id="edit-reason" 
+                                     placeholder="Bu düzenlemeyi neden yaptığınızı açıklayın..."
+                                     style="width: 100%; height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                                     required></textarea>
+                        </div>
+                        
+                        <div id="edit-error" style="color: #d32f2f; margin-top: 10px; display: none;">
+                            Lütfen düzenleme sebebini belirtin.
+                        </div>
+                    </form>
+                </div>
+                <div class="bkm-modal-footer">
+                    <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()">İptal</button>
+                    <button class="bkm-btn bkm-btn-primary" id="bkm-edit-submit-btn">Düzenlemeyi Kaydet</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Focus on first input
+    setTimeout(function() {
+        document.getElementById('edit-task-title').focus();
+    }, 100);
+    
+    // Submit handler
+    document.getElementById('bkm-edit-submit-btn').addEventListener('click', function() {
+        var editReason = document.getElementById('edit-reason').value.trim();
+        var errorDiv = document.getElementById('edit-error');
+        
+        if (!editReason) {
+            errorDiv.style.display = 'block';
+            document.getElementById('edit-reason').focus();
+            return;
+        }
+        
+        errorDiv.style.display = 'none';
+        
+        var formData = {
+            action: 'bkm_edit_task',
+            task_id: taskId,
+            title: document.getElementById('edit-task-title').value.trim(),
+            content: document.getElementById('edit-task-content').value.trim(),
+            progress: parseInt(document.getElementById('edit-task-progress').value) || 0,
+            edit_reason: editReason,
+            nonce: '<?php echo wp_create_nonce('bkm_frontend_nonce'); ?>'
+        };
+        
+        closeBkmModal();
+        
+        // Submit edit
+        jQuery.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: formData,
+            success: function(response) {
+                if (response && response.success) {
+                    showInPageNotification('✅ Görev başarıyla güncellendi!', 'success');
+                    // Reload tasks
+                    var actionId = getCurrentActionId();
+                    if (actionId) {
+                        loadTasksForAction(actionId);
+                    }
+                } else {
+                    var errorMsg = response && response.data ? response.data : 'Bilinmeyen hata';
+                    showInPageNotification('❌ Hata: ' + errorMsg, 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                showInPageNotification('❌ Bağlantı hatası: ' + error, 'error');
+            }
+        });
+    });
+    
+    // Close on backdrop click
+    modal.querySelector('.bkm-modal-backdrop').addEventListener('click', function(e) {
+        if (e.target === e.currentTarget) {
+            closeBkmModal();
         }
     });
 }
 
 function newEditTask(taskId) {
     console.log('🚀 NEW: Edit task called for ID:', taskId);
-    alert('📝 Düzenleme özelliği geliştirilme aşamasında. Task ID: ' + taskId);
-    // TODO: Implement edit functionality
+    showEditTaskModal(taskId);
 }
 
 function newShowTaskHistory(taskId) {
@@ -3117,37 +3601,97 @@ function newShowTaskHistory(taskId) {
             console.log('✅ NEW: History response:', response);
             if (response && response.success && response.data) {
                 var history = response.data;
-                var historyHtml = '<h3>📋 Görev Geçmişi (Task ID: ' + taskId + ')</h3>';
-                
-                if (history.length === 0) {
-                    historyHtml += '<p>Bu görev için henüz geçmiş kaydı bulunmamaktadır.</p>';
-                } else {
-                    historyHtml += '<div style="max-height: 400px; overflow-y: auto;">';
-                    history.forEach(function(entry) {
-                        historyHtml += '<div style="border-left: 3px solid #007cba; padding: 10px; margin: 10px 0; background: #f8f9fa;">';
-                        historyHtml += '<strong>' + entry.action_type + '</strong><br>';
-                        historyHtml += 'Kullanıcı: ' + entry.user_name + '<br>';
-                        historyHtml += 'Tarih: ' + entry.created_at + '<br>';
-                        if (entry.old_value || entry.new_value) {
-                            historyHtml += 'Değişiklik: ' + (entry.old_value || 'Yok') + ' → ' + (entry.new_value || 'Yok') + '<br>';
-                        }
-                        if (entry.description) {
-                            historyHtml += 'Açıklama: ' + entry.description;
-                        }
-                        historyHtml += '</div>';
-                    });
-                    historyHtml += '</div>';
-                }
-                
-                alert(historyHtml.replace(/<[^>]*>/g, '\n')); // Simple text version for now
+                showTaskHistoryModal(taskId, history);
             } else {
                 var errorMsg = response && response.data ? response.data : 'Bilinmeyen hata';
-                alert('❌ Görev geçmişi alınamadı: ' + errorMsg);
+                showInPageNotification('❌ Görev geçmişi alınamadı: ' + errorMsg, 'error');
             }
         },
         error: function(xhr, status, error) {
             console.error('❌ NEW: History AJAX error:', error, xhr.responseText);
-            alert('❌ Bağlantı hatası: ' + error);
+            showInPageNotification('❌ Bağlantı hatası: ' + error, 'error');
+        }
+    });
+}
+
+function showTaskHistoryModal(taskId, history) {
+    // Remove existing modals
+    var existingModals = document.querySelectorAll('.bkm-modal');
+    existingModals.forEach(function(modal) { modal.remove(); });
+    
+    var historyHtml = '';
+    
+    if (history.length === 0) {
+        historyHtml = '<p style="text-align: center; color: #666; padding: 20px;">Bu görev için henüz geçmiş kaydı bulunmamaktadır.</p>';
+    } else {
+        historyHtml = '<div style="max-height: 400px; overflow-y: auto;">';
+        history.forEach(function(entry) {
+            historyHtml += '<div style="border-left: 3px solid #007cba; padding: 15px; margin: 15px 0; background: #f8f9fa; border-radius: 4px;">';
+            historyHtml += '<div style="font-weight: 600; color: #333; margin-bottom: 8px;">' + (entry.action_type || 'Düzenleme') + '</div>';
+            historyHtml += '<div style="color: #666; font-size: 14px; margin-bottom: 5px;">👤 <strong>Kullanıcı:</strong> ' + (entry.user_name || 'Bilinmiyor') + '</div>';
+            historyHtml += '<div style="color: #666; font-size: 14px; margin-bottom: 8px;">📅 <strong>Tarih:</strong> ' + (entry.created_at || 'Bilinmiyor') + '</div>';
+            
+            if (entry.edit_reason) {
+                historyHtml += '<div style="color: #333; margin-bottom: 8px;"><strong>Sebep:</strong> ' + entry.edit_reason + '</div>';
+            }
+            
+            if (entry.field_changes) {
+                historyHtml += '<div style="color: #333; margin-bottom: 8px;"><strong>Değişen Alanlar:</strong> ' + entry.field_changes + '</div>';
+            }
+            
+            if (entry.old_value || entry.new_value) {
+                historyHtml += '<div style="color: #333;"><strong>Değişiklik:</strong> ';
+                historyHtml += '<span style="color: #d32f2f;">' + (entry.old_value || 'Yok') + '</span> → ';
+                historyHtml += '<span style="color: #2e7d32;">' + (entry.new_value || 'Yok') + '</span>';
+                historyHtml += '</div>';
+            }
+            
+            if (entry.description && entry.description !== entry.edit_reason) {
+                historyHtml += '<div style="color: #666; font-style: italic; margin-top: 8px;">' + entry.description + '</div>';
+            }
+            
+            historyHtml += '</div>';
+        });
+        historyHtml += '</div>';
+    }
+    
+    var modal = document.createElement('div');
+    modal.className = 'bkm-modal';
+    modal.innerHTML = `
+        <div class="bkm-modal-backdrop">
+            <div class="bkm-modal-content" style="max-width: 700px;">
+                <div class="bkm-modal-header">
+                    <h3>📋 Görev Geçmişi (ID: ${taskId})</h3>
+                    <button class="bkm-modal-close" onclick="closeBkmModal()">&times;</button>
+                </div>
+                <div class="bkm-modal-body">
+                    ${historyHtml}
+                </div>
+                <div class="bkm-modal-footer">
+                    <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()">Kapat</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.querySelector('.bkm-modal-backdrop').addEventListener('click', function(e) {
+        if (e.target === e.currentTarget) {
+            closeBkmModal();
         }
     });
 }

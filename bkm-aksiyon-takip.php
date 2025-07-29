@@ -3,7 +3,7 @@
  * Plugin Name: BKM AKSİYON TAKİP
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
  * Description: WordPress eklentisi ile aksiyon ve görev takip sistemi
- * Version: 1.1.4
+ * Version: 1.2.0
  * Author: Anadolu Birlik
  * Text Domain: bkm-aksiyon-takip
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BKM_AKSIYON_TAKIP_VERSION', '1.1.4');
+define('BKM_AKSIYON_TAKIP_VERSION', '1.2.0');
 define('BKM_AKSIYON_TAKIP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);
@@ -142,6 +142,8 @@ class BKM_Aksiyon_Takip {
         add_action('wp_ajax_nopriv_bkm_approve_task', array($this, 'ajax_approve_task'));
         add_action('wp_ajax_bkm_reject_task', array($this, 'ajax_reject_task'));
         add_action('wp_ajax_nopriv_bkm_reject_task', array($this, 'ajax_reject_task'));
+        add_action('wp_ajax_bkm_get_task_details', array($this, 'ajax_get_task_details'));
+        add_action('wp_ajax_nopriv_bkm_get_task_details', array($this, 'ajax_get_task_details'));
         
         
         // Category AJAX handlers
@@ -4414,6 +4416,60 @@ public function ajax_reject_task() {
     
     error_log('✅ Task rejected successfully');
     wp_send_json_success('Görev başarıyla reddedildi.');
+}
+
+public function ajax_get_task_details() {
+    global $wpdb;
+    
+    // Debug logging
+    error_log('🔧 ajax_get_task_details called');
+    
+    // Nonce kontrolü
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_frontend_nonce')) {
+        error_log('❌ Nonce verification failed in get_task_details');
+        wp_send_json_error('Güvenlik kontrolü başarısız.');
+    }
+    
+    // Kullanıcı yetki kontrolü - sadece Editor ve Admin görebilir veya debug modunda tüm kullanıcılar
+    $can_view = current_user_can('edit_others_posts') || (defined('WP_DEBUG') && WP_DEBUG);
+    if (!$can_view) {
+        error_log('❌ User does not have permission to view task details');
+        wp_send_json_error('Görev detaylarını görme yetkiniz bulunmamaktadır.');
+    }
+    
+    $task_id = intval($_POST['task_id'] ?? 0);
+    
+    if (!$task_id) {
+        error_log('❌ Missing task_id');
+        wp_send_json_error('Görev ID gereklidir.');
+    }
+    
+    // Görev bilgilerini al
+    $tasks_table = $wpdb->prefix . 'bkm_tasks';
+    $task = $wpdb->get_row($wpdb->prepare("SELECT * FROM $tasks_table WHERE id = %d", $task_id), ARRAY_A);
+    
+    if (!$task) {
+        error_log('❌ Task not found with ID: ' . $task_id);
+        wp_send_json_error('Görev bulunamadı.');
+    }
+    
+    // Prepare task data for frontend
+    $task_data = array(
+        'id' => $task['id'],
+        'title' => $task['title'] ?: $task['content'], // Fallback to content if title is empty
+        'content' => $task['content'],
+        'progress' => intval($task['progress'] ?: $task['ilerleme_durumu']),
+        'responsible_id' => intval($task['sorumlu_id']),
+        'start_date' => $task['start_date'] ?: $task['baslangic_tarihi'],
+        'target_date' => $task['target_date'] ?: $task['hedef_bitis_tarihi'],
+        'approval_status' => $task['approval_status'] ?: 'pending',
+        'status' => $task['status'],
+        'created_at' => $task['created_at'],
+        'updated_at' => $task['updated_at']
+    );
+    
+    error_log('✅ Task details retrieved successfully for ID: ' . $task_id);
+    wp_send_json_success($task_data);
 }
 
 }
