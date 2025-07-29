@@ -3,7 +3,7 @@
  * Plugin Name: BKM AKSİYON TAKİP
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
  * Description: WordPress eklentisi ile aksiyon ve görev takip sistemi
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: Anadolu Birlik
  * Text Domain: bkm-aksiyon-takip
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BKM_AKSIYON_TAKIP_VERSION', '1.2.0');
+define('BKM_AKSIYON_TAKIP_VERSION', '1.2.1');
 define('BKM_AKSIYON_TAKIP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);
@@ -4084,13 +4084,23 @@ public function ajax_edit_task() {
     $update_data = array(
         'content' => $new_content,
         'title' => $new_title,
-        'sorumlu_id' => $new_responsible,
-        'baslangic_tarihi' => $new_start_date,
-        'hedef_bitis_tarihi' => $new_target_date,
+        'sorumlu_id' => $new_responsible ?: $current_task['sorumlu_id'], // Preserve existing if empty
+        'baslangic_tarihi' => $new_start_date ?: $current_task['baslangic_tarihi'], // Preserve existing if empty
+        'hedef_bitis_tarihi' => $new_target_date ?: $current_task['hedef_bitis_tarihi'], // Preserve existing if empty
         'ilerleme_durumu' => $new_progress,
         'progress' => $new_progress,
         'updated_at' => current_time('mysql')
     );
+    
+    // Enhanced debugging for update data
+    error_log('🔧 Update data being sent to database:');
+    error_log('  - new_responsible: ' . $new_responsible);
+    error_log('  - new_start_date: ' . $new_start_date);
+    error_log('  - new_target_date: ' . $new_target_date);
+    error_log('  - current_task sorumlu_id: ' . $current_task['sorumlu_id']);
+    error_log('  - current_task baslangic_tarihi: ' . $current_task['baslangic_tarihi']);
+    error_log('  - current_task hedef_bitis_tarihi: ' . $current_task['hedef_bitis_tarihi']);
+    error_log('  - Final update_data: ' . json_encode($update_data));
     
     $result = $wpdb->update($tasks_table, $update_data, array('id' => $task_id));
     
@@ -4456,17 +4466,29 @@ public function ajax_get_task_details() {
     // Prepare task data for frontend
     $task_data = array(
         'id' => $task['id'],
-        'title' => $task['title'] ?: $task['content'], // Fallback to content if title is empty
+        'title' => $task['title'] ?: ($task['content'] ? substr($task['content'], 0, 50) : ''),
         'content' => $task['content'],
-        'progress' => intval($task['progress'] ?: $task['ilerleme_durumu']),
-        'responsible_id' => intval($task['sorumlu_id']),
-        'start_date' => $task['start_date'] ?: $task['baslangic_tarihi'],
-        'target_date' => $task['target_date'] ?: $task['hedef_bitis_tarihi'],
+        'progress' => intval($task['progress'] ?: $task['ilerleme_durumu'] ?: 0),
+        'responsible_id' => intval($task['sorumlu_id'] ?: 0),
+        'start_date' => $task['start_date'] ?: $task['baslangic_tarihi'] ?: '',
+        'target_date' => $task['target_date'] ?: $task['hedef_bitis_tarihi'] ?: '',
         'approval_status' => $task['approval_status'] ?: 'pending',
         'status' => $task['status'],
         'created_at' => $task['created_at'],
         'updated_at' => $task['updated_at']
     );
+    
+    // Enhanced debugging to see what data we have
+    error_log('🔍 Task field mapping debug:');
+    error_log('  - Task ID: ' . $task['id']);
+    error_log('  - sorumlu_id: ' . ($task['sorumlu_id'] ?? 'NULL'));
+    error_log('  - baslangic_tarihi: ' . ($task['baslangic_tarihi'] ?? 'NULL'));
+    error_log('  - hedef_bitis_tarihi: ' . ($task['hedef_bitis_tarihi'] ?? 'NULL'));
+    error_log('  - start_date: ' . ($task['start_date'] ?? 'NULL'));
+    error_log('  - target_date: ' . ($task['target_date'] ?? 'NULL'));
+    error_log('  - progress: ' . ($task['progress'] ?? 'NULL'));
+    error_log('  - ilerleme_durumu: ' . ($task['ilerleme_durumu'] ?? 'NULL'));
+    error_log('  - Final mapped data: ' . json_encode($task_data));
     
     // Get users for dropdown
     $users = get_users();

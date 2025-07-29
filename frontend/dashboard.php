@@ -2198,7 +2198,7 @@ function displayTasksInContainer(container, tasks, actionId) {
             console.log('❌ Added disabled note button for rejected task ' + task.id);
         } else {
             // Fallback for tasks with unknown approval status
-            html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px; background: #6f42c1; color: white;" title="Not ekle">📝 Not Ekle</button>';
+            html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px; background: #8e44ad; color: white;" title="Not ekle">📝 Not Ekle</button>';
             console.log('⚠️ Added fallback note button for task ' + task.id + ' with unknown approval status: ' + task.approval_status);
         }
         
@@ -3334,8 +3334,8 @@ function showRejectTaskModal(taskId) {
     modal.className = 'bkm-modal';
     modal.innerHTML = `
         <div class="bkm-modal-backdrop" style="background: rgba(0,0,0,0.5);">
-            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 500px; width: 90%; max-height: 80vh; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-                <div class="bkm-modal-header" style="padding: 20px 24px 0 24px; border-bottom: 1px solid #eee;">
+            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 600px; width: 95%; max-height: 85vh; box-shadow: 0 4px 20px rgba(0,0,0,0.15); overflow-y: auto;">
+                <div class="bkm-modal-header" style="padding: 20px 24px; border-bottom: 1px solid #eee; position: sticky; top: 0; background: white; z-index: 1;">
                     <h3 style="margin: 0; color: #d32f2f; display: flex; align-items: center; gap: 8px;">❌ Görevi Reddet</h3>
                     <button class="bkm-modal-close" onclick="closeBkmModal()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
                 </div>
@@ -3343,15 +3343,15 @@ function showRejectTaskModal(taskId) {
                     <p style="margin: 0 0 15px 0; color: #333;">Bu görevi neden reddediyorsunuz? Lütfen sebebini açıklayın:</p>
                     <textarea id="rejection-reason" 
                              placeholder="Red sebebinizi buraya yazın..." 
-                             style="width: 100%; height: 120px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical; font-size: 14px;"
+                             style="width: 100%; height: 120px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical; font-size: 14px; box-sizing: border-box;"
                              required></textarea>
                     <div id="rejection-error" style="color: #d32f2f; margin-top: 10px; display: none; font-size: 14px;">
                         Red sebebi girmeniz zorunludur.
                     </div>
                 </div>
-                <div class="bkm-modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 20px; border-top: 1px solid #eee;">
-                    <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()" style="padding: 10px 20px; border: 1px solid #ddd; background: #f8f9fa; color: #333; border-radius: 4px; cursor: pointer;">İptal</button>
-                    <button class="bkm-btn bkm-btn-danger" id="bkm-reject-confirm-btn" style="padding: 10px 20px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Onayla</button>
+                <div class="bkm-modal-footer" style="display: flex; gap: 12px; justify-content: flex-end; padding: 20px; border-top: 1px solid #eee; background: #f8f9fa;">
+                    <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()" style="padding: 12px 24px; border: 1px solid #ddd; background: #fff; color: #333; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 80px;">İptal</button>
+                    <button class="bkm-btn bkm-btn-danger" id="bkm-reject-confirm-btn" style="padding: 12px 24px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 80px; box-shadow: 0 2px 4px rgba(220,53,69,0.2);">Onayla</button>
                 </div>
             </div>
         </div>
@@ -3488,70 +3488,70 @@ function showEditModalWithData(taskId, task, users) {
     modal.className = 'bkm-modal';
     modal.innerHTML = `
         <div class="bkm-modal-backdrop" style="background: rgba(0,0,0,0.5);">
-            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+            <div class="bkm-modal-content" style="background: white; border-radius: 8px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
                 <div class="bkm-modal-header" style="padding: 20px 24px; border-bottom: 1px solid #eee; position: sticky; top: 0; background: white; z-index: 1;">
                     <h3 style="margin: 0; color: #333; display: flex; align-items: center; gap: 8px;">✏️ Görevi Düzenle</h3>
                     <button class="bkm-modal-close" onclick="closeBkmModal()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
                 </div>
                 <div class="bkm-modal-body" style="padding: 24px;">
                     <form id="edit-task-form">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px;">
                             <div>
-                                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Görev Başlığı:</label>
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Görev Başlığı:</label>
                                 <input type="text" id="edit-task-title" value="${task.title || ''}" 
-                                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+                                       style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;" />
                             </div>
                             <div>
-                                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Sorumlu Kişi:</label>
-                                <select id="edit-task-responsible" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Sorumlu Kişi:</label>
+                                <select id="edit-task-responsible" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
                                     <option value="">Seçiniz...</option>
                                     ${usersOptions}
                                 </select>
                             </div>
                         </div>
                         
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Görev İçeriği:</label>
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Görev İçeriği:</label>
                             <textarea id="edit-task-content" 
-                                     style="width: 100%; height: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                                     style="width: 100%; height: 120px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;"
                                      >${task.content || ''}</textarea>
                         </div>
                         
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                             <div>
-                                <label style="display: block; margin-bottom: 5px; font-weight: 500;">İlerleme Durumu (%):</label>
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">İlerleme Durumu (%):</label>
                                 <input type="number" id="edit-task-progress" value="${task.progress || 0}" 
                                        min="0" max="100"
-                                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+                                       style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;" />
                             </div>
                             <div>
-                                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Başlangıç Tarihi:</label>
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Başlangıç Tarihi:</label>
                                 <input type="date" id="edit-task-start-date" value="${task.start_date || ''}" 
-                                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+                                       style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;" />
                             </div>
                             <div>
-                                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Hedef Tarihi:</label>
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Hedef Tarihi:</label>
                                 <input type="date" id="edit-task-target-date" value="${task.target_date || ''}" 
-                                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+                                       style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;" />
                             </div>
                         </div>
                         
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Düzenleme Sebebi:</label>
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Düzenleme Sebebi:</label>
                             <textarea id="edit-reason" 
                                      placeholder="Bu düzenlemeyi neden yaptığınızı açıklayın..."
-                                     style="width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                                     style="width: 100%; height: 100px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; resize: vertical; font-size: 14px; box-sizing: border-box;"
                                      required></textarea>
                         </div>
                         
-                        <div id="edit-error" style="color: #d32f2f; margin-top: 10px; display: none;">
+                        <div id="edit-error" style="color: #d32f2f; margin-top: 10px; display: none; padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">
                             Lütfen düzenleme sebebini belirtin.
                         </div>
                     </form>
                 </div>
-                <div class="bkm-modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 20px; border-top: 1px solid #eee;">
-                    <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()" style="padding: 10px 20px; border: 1px solid #ddd; background: #f8f9fa; color: #333; border-radius: 4px; cursor: pointer;">İptal</button>
-                    <button class="bkm-btn bkm-btn-primary" id="bkm-edit-submit-btn" style="padding: 10px 20px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Düzenlemeyi Kaydet</button>
+                <div class="bkm-modal-footer" style="display: flex; gap: 12px; justify-content: flex-end; padding: 20px; border-top: 1px solid #eee; background: #f8f9fa;">
+                    <button class="bkm-btn bkm-btn-secondary" onclick="closeBkmModal()" style="padding: 12px 24px; border: 1px solid #ddd; background: #fff; color: #333; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 100px;">İptal</button>
+                    <button class="bkm-btn bkm-btn-primary" id="bkm-edit-submit-btn" style="padding: 12px 24px; background: #007cba; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; min-width: 150px; box-shadow: 0 2px 4px rgba(0,124,186,0.2);">Düzenlemeyi Kaydet</button>
                 </div>
             </div>
         </div>
