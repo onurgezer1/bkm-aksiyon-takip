@@ -4011,7 +4011,7 @@ public function ajax_edit_task() {
     $edit_reason = sanitize_textarea_field($_POST['edit_reason'] ?? '');
     $new_content = sanitize_textarea_field($_POST['content'] ?? '');
     $new_title = sanitize_text_field($_POST['title'] ?? '');
-    $new_responsible = intval($_POST['responsible'] ?? 0);
+    $new_responsible = intval($_POST['responsible_id'] ?? 0);
     $new_start_date = sanitize_text_field($_POST['start_date'] ?? '');
     $new_target_date = sanitize_text_field($_POST['target_date'] ?? '');
     $new_progress = intval($_POST['progress'] ?? 0);
@@ -4468,8 +4468,25 @@ public function ajax_get_task_details() {
         'updated_at' => $task['updated_at']
     );
     
+    // Get users for dropdown
+    $users = get_users();
+    $users_list = array();
+    foreach ($users as $user) {
+        $full_name = trim($user->first_name . ' ' . $user->last_name);
+        $display_text = !empty($full_name) ? $full_name : $user->display_name;
+        $users_list[] = array(
+            'id' => $user->ID,
+            'name' => $display_text
+        );
+    }
+    
+    $response_data = array(
+        'task' => $task_data,
+        'users' => $users_list
+    );
+    
     error_log('✅ Task details retrieved successfully for ID: ' . $task_id);
-    wp_send_json_success($task_data);
+    wp_send_json_success($response_data);
 }
 
 }
