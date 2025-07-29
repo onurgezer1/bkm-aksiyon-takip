@@ -1970,6 +1970,9 @@ function toggleTasks(actionId) {
 function loadTasksForAction(actionId) {    
     console.log('🧪 loadTasksForAction çağrıldı, actionId:', actionId);
     
+    // Store action ID for use in other functions
+    lastLoadedActionId = actionId;
+    
     var tasksContainer = document.querySelector('#tasks-' + actionId + ' .bkm-tasks-container');
     if (!tasksContainer) {
         console.error('❌ Tasks container bulunamadı:', '#tasks-' + actionId + ' .bkm-tasks-container');
@@ -2187,59 +2190,35 @@ function displayTasksInContainer(container, tasks, actionId) {
         html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px;">📝 Not Ekle</button>';
         html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')" style="margin-right: 8px;">💬 Notlar</button>';
         
-        // Task approval buttons (only for the responsible person and pending status)
-        console.log('🔍 Checking approval buttons for task ' + task.id + ':', {
+        // NEW SIMPLIFIED APPROACH: Always show action buttons for better debugging
+        console.log('🔍 NEW SYSTEM: Task ' + task.id + ' button logic:', {
             approval_status: task.approval_status,
-            approval_status_type: typeof task.approval_status,
             sorumlu_id: task.sorumlu_id,
-            sorumlu_id_type: typeof task.sorumlu_id,
             current_user_id: <?php echo $current_user_id; ?>,
-            current_user_id_type: typeof <?php echo $current_user_id; ?>,
-            sorumlu_id_int: parseInt(task.sorumlu_id),
-            condition_approval: task.approval_status === 'pending',
-            condition_user: parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>,
-            condition_met: (task.approval_status === 'pending' && parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>),
-            wp_debug: <?php echo (defined('WP_DEBUG') && WP_DEBUG) ? 'true' : 'false'; ?>,
             user_is_admin: <?php echo $is_admin ? 'true' : 'false'; ?>,
             user_is_editor: <?php echo $is_editor ? 'true' : 'false'; ?>
         });
         
-        // For debugging purposes, also show debug buttons in debug mode
-        <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
-        if (task.approval_status === 'pending') {
-            console.log('🔧 DEBUG MODE: Adding approval buttons regardless of user check');
-            html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="approveTask(' + task.id + ')" style="margin-right: 8px;">✅ Kabul Et [DEBUG]</button>';
-            html += '<button class="bkm-btn bkm-btn-small bkm-btn-danger" onclick="rejectTask(' + task.id + ')" style="margin-right: 8px;">❌ Reddet [DEBUG]</button>';
-            console.log('🔧 DEBUG: Added both Kabul Et and Reddet debug buttons for task ' + task.id);
-        } else {
-            console.log('🔧 DEBUG: Not adding debug buttons - approval_status is not pending:', task.approval_status);
-        }
-        <?php endif; ?>
+        // SIMPLIFIED APPROVAL BUTTONS - Show if task is pending
+        var approvalStatus = task.approval_status || 'pending';
+        var taskSorumluId = parseInt(task.sorumlu_id) || 0;
+        var currentUserId = <?php echo $current_user_id; ?>;
         
-        if (task.approval_status === 'pending' && parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>) {
-            console.log('✅ Adding approval buttons for task ' + task.id);
-            html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="approveTask(' + task.id + ')" style="margin-right: 8px;">✅ Kabul Et</button>';
-            html += '<button class="bkm-btn bkm-btn-small bkm-btn-danger" onclick="rejectTask(' + task.id + ')" style="margin-right: 8px;">❌ Reddet</button>';
+        if (approvalStatus === 'pending') {
+            console.log('✅ Adding approval buttons for pending task ' + task.id);
+            html += '<button class="bkm-btn bkm-btn-small" style="background: #28a745; color: white; margin-right: 8px;" onclick="newApproveTask(' + task.id + ')">✅ Kabul Et</button>';
+            html += '<button class="bkm-btn bkm-btn-small" style="background: #dc3545; color: white; margin-right: 8px;" onclick="newRejectTask(' + task.id + ')">❌ Reddet</button>';
         } else {
-            console.log('❌ NOT adding approval buttons for task ' + task.id + ' - condition not met');
-            console.log('  - approval_status check:', task.approval_status === 'pending');
-            console.log('  - user check:', parseInt(task.sorumlu_id) === <?php echo $current_user_id; ?>);
+            console.log('ℹ️ Task ' + task.id + ' not pending, status: ' + approvalStatus);
         }
         
-        // Task history button (only for editors and admins)
-        <?php if ($is_editor || $is_admin): ?>
-        html += '<button class="bkm-btn bkm-btn-small bkm-btn-warning" onclick="showTaskHistory(' + task.id + ')" style="margin-right: 8px;">📋 Geçmiş</button>';
-        <?php endif; ?>
-        
-        // Edit button (for editors, admins, and in debug mode for all users)
-        <?php if ($is_editor || $is_admin): ?>
-        html += '<button class="bkm-btn bkm-btn-small bkm-btn-secondary" onclick="editTask(' + task.id + ')" style="margin-right: 8px;">✏️ Düzenle</button>';
-        console.log('✅ Edit button added for user with editor/admin permissions');
-        <?php elseif (defined('WP_DEBUG') && WP_DEBUG): ?>
-        html += '<button class="bkm-btn bkm-btn-small bkm-btn-secondary" onclick="editTask(' + task.id + ')" style="margin-right: 8px;">✏️ Düzenle [DEBUG]</button>';
-        console.log('🔧 DEBUG: Edit button added for non-admin user');
+        // SIMPLIFIED HISTORY AND EDIT BUTTONS - Show for admins/editors or in debug mode
+        <?php if ($is_editor || $is_admin || (defined('WP_DEBUG') && WP_DEBUG)): ?>
+        html += '<button class="bkm-btn bkm-btn-small" style="background: #ffc107; color: #212529; margin-right: 8px;" onclick="newShowTaskHistory(' + task.id + ')">📋 Geçmiş</button>';
+        html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px;" onclick="newEditTask(' + task.id + ')">✏️ Düzenle</button>';
+        console.log('✅ Added history and edit buttons for privileged user or debug mode');
         <?php else: ?>
-        console.log('❌ Edit button NOT added - user lacks permissions. Is admin: <?php echo $is_admin ? "true" : "false"; ?>, Is editor: <?php echo $is_editor ? "true" : "false"; ?>');
+        console.log('ℹ️ History and edit buttons not added - insufficient permissions');
         <?php endif; ?>
         
         // Complete button (only if not completed and approved)
@@ -3032,6 +3011,159 @@ function displayTaskHistoryModal(history, taskId) {
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
+
+// NEW SIMPLIFIED TASK ACTION FUNCTIONS
+function newApproveTask(taskId) {
+    console.log('🚀 NEW: Approve task called for ID:', taskId);
+    
+    if (!confirm('Bu görevi kabul etmek istediğinizden emin misiniz?')) {
+        return;
+    }
+    
+    // Simple AJAX call with basic error handling
+    jQuery.ajax({
+        url: '<?php echo admin_url('admin-ajax.php'); ?>',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            action: 'bkm_approve_task',
+            task_id: taskId,
+            nonce: '<?php echo wp_create_nonce('bkm_frontend_nonce'); ?>'
+        },
+        success: function(response) {
+            console.log('✅ NEW: Approve response:', response);
+            if (response && response.success) {
+                alert('✅ Görev başarıyla kabul edildi!');
+                // Reload tasks to show updated status
+                var actionId = getCurrentActionId();
+                if (actionId) {
+                    loadTasksForAction(actionId);
+                }
+            } else {
+                var errorMsg = response && response.data ? response.data : 'Bilinmeyen hata';
+                alert('❌ Hata: ' + errorMsg);
+                console.error('Approve error:', response);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('❌ NEW: Approve AJAX error:', error, xhr.responseText);
+            alert('❌ Bağlantı hatası: ' + error);
+        }
+    });
+}
+
+function newRejectTask(taskId) {
+    console.log('🚀 NEW: Reject task called for ID:', taskId);
+    
+    var reason = prompt('Lütfen red sebebinizi belirtiniz:');
+    if (!reason || reason.trim() === '') {
+        alert('Red sebebi girmeniz zorunludur.');
+        return;
+    }
+    
+    // Simple AJAX call with basic error handling
+    jQuery.ajax({
+        url: '<?php echo admin_url('admin-ajax.php'); ?>',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            action: 'bkm_reject_task',
+            task_id: taskId,
+            rejection_reason: reason.trim(),
+            nonce: '<?php echo wp_create_nonce('bkm_frontend_nonce'); ?>'
+        },
+        success: function(response) {
+            console.log('✅ NEW: Reject response:', response);
+            if (response && response.success) {
+                alert('✅ Görev başarıyla reddedildi!');
+                // Reload tasks to show updated status
+                var actionId = getCurrentActionId();
+                if (actionId) {
+                    loadTasksForAction(actionId);
+                }
+            } else {
+                var errorMsg = response && response.data ? response.data : 'Bilinmeyen hata';
+                alert('❌ Hata: ' + errorMsg);
+                console.error('Reject error:', response);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('❌ NEW: Reject AJAX error:', error, xhr.responseText);
+            alert('❌ Bağlantı hatası: ' + error);
+        }
+    });
+}
+
+function newEditTask(taskId) {
+    console.log('🚀 NEW: Edit task called for ID:', taskId);
+    alert('📝 Düzenleme özelliği geliştirilme aşamasında. Task ID: ' + taskId);
+    // TODO: Implement edit functionality
+}
+
+function newShowTaskHistory(taskId) {
+    console.log('🚀 NEW: Show task history for ID:', taskId);
+    
+    // Simple AJAX call to get task history
+    jQuery.ajax({
+        url: '<?php echo admin_url('admin-ajax.php'); ?>',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            action: 'bkm_get_task_history',
+            task_id: taskId,
+            nonce: '<?php echo wp_create_nonce('bkm_frontend_nonce'); ?>'
+        },
+        success: function(response) {
+            console.log('✅ NEW: History response:', response);
+            if (response && response.success && response.data) {
+                var history = response.data;
+                var historyHtml = '<h3>📋 Görev Geçmişi (Task ID: ' + taskId + ')</h3>';
+                
+                if (history.length === 0) {
+                    historyHtml += '<p>Bu görev için henüz geçmiş kaydı bulunmamaktadır.</p>';
+                } else {
+                    historyHtml += '<div style="max-height: 400px; overflow-y: auto;">';
+                    history.forEach(function(entry) {
+                        historyHtml += '<div style="border-left: 3px solid #007cba; padding: 10px; margin: 10px 0; background: #f8f9fa;">';
+                        historyHtml += '<strong>' + entry.action_type + '</strong><br>';
+                        historyHtml += 'Kullanıcı: ' + entry.user_name + '<br>';
+                        historyHtml += 'Tarih: ' + entry.created_at + '<br>';
+                        if (entry.old_value || entry.new_value) {
+                            historyHtml += 'Değişiklik: ' + (entry.old_value || 'Yok') + ' → ' + (entry.new_value || 'Yok') + '<br>';
+                        }
+                        if (entry.description) {
+                            historyHtml += 'Açıklama: ' + entry.description;
+                        }
+                        historyHtml += '</div>';
+                    });
+                    historyHtml += '</div>';
+                }
+                
+                alert(historyHtml.replace(/<[^>]*>/g, '\n')); // Simple text version for now
+            } else {
+                var errorMsg = response && response.data ? response.data : 'Bilinmeyen hata';
+                alert('❌ Görev geçmişi alınamadı: ' + errorMsg);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('❌ NEW: History AJAX error:', error, xhr.responseText);
+            alert('❌ Bağlantı hatası: ' + error);
+        }
+    });
+}
+
+// Helper function to get current action ID from URL or context
+function getCurrentActionId() {
+    // Try to get action ID from the last loadTasksForAction call or from global context
+    if (typeof lastLoadedActionId !== 'undefined') {
+        return lastLoadedActionId;
+    }
+    // Could also try to extract from URL or other context
+    return null;
+}
+
+// Store the last loaded action ID for reference
+var lastLoadedActionId = null;
 
 function closeTaskHistoryModal(event) {
     if (event && event.target !== event.currentTarget) return;

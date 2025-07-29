@@ -3,7 +3,7 @@
  * Plugin Name: BKM AKSİYON TAKİP
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
  * Description: WordPress eklentisi ile aksiyon ve görev takip sistemi
- * Version: 1.1.3
+ * Version: 1.1.4
  * Author: Anadolu Birlik
  * Text Domain: bkm-aksiyon-takip
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BKM_AKSIYON_TAKIP_VERSION', '1.1.3');
+define('BKM_AKSIYON_TAKIP_VERSION', '1.1.4');
 define('BKM_AKSIYON_TAKIP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);
@@ -4239,8 +4239,22 @@ public function ajax_approve_task() {
     }
     
     if ($task->sorumlu_id != $current_user_id) {
-        error_log('❌ User not responsible for task. Task sorumlu: ' . $task->sorumlu_id . ', Current user: ' . $current_user_id);
-        wp_send_json_error('Bu görevi sadece sorumlu kişi onaylayabilir.');
+        // In debug mode, allow admins and editors to approve any task
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $user_roles = wp_get_current_user()->roles;
+            $is_admin = in_array('administrator', $user_roles) || current_user_can('manage_options');
+            $is_editor = in_array('editor', $user_roles) || current_user_can('edit_others_posts');
+            
+            if (!($is_admin || $is_editor)) {
+                error_log('❌ User not responsible for task and not admin/editor. Task sorumlu: ' . $task->sorumlu_id . ', Current user: ' . $current_user_id);
+                wp_send_json_error('Bu görevi sadece sorumlu kişi veya yönetici onaylayabilir.');
+            } else {
+                error_log('🔧 DEBUG: Admin/Editor bypassing responsibility check for task approval');
+            }
+        } else {
+            error_log('❌ User not responsible for task. Task sorumlu: ' . $task->sorumlu_id . ', Current user: ' . $current_user_id);
+            wp_send_json_error('Bu görevi sadece sorumlu kişi onaylayabilir.');
+        }
     }
     
     if ($task->approval_status === 'approved') {
@@ -4334,8 +4348,22 @@ public function ajax_reject_task() {
     }
     
     if ($task->sorumlu_id != $current_user_id) {
-        error_log('❌ User not responsible for task. Task sorumlu: ' . $task->sorumlu_id . ', Current user: ' . $current_user_id);
-        wp_send_json_error('Bu görevi sadece sorumlu kişi reddedebilir.');
+        // In debug mode, allow admins and editors to reject any task
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $user_roles = wp_get_current_user()->roles;
+            $is_admin = in_array('administrator', $user_roles) || current_user_can('manage_options');
+            $is_editor = in_array('editor', $user_roles) || current_user_can('edit_others_posts');
+            
+            if (!($is_admin || $is_editor)) {
+                error_log('❌ User not responsible for task and not admin/editor. Task sorumlu: ' . $task->sorumlu_id . ', Current user: ' . $current_user_id);
+                wp_send_json_error('Bu görevi sadece sorumlu kişi veya yönetici reddedebilir.');
+            } else {
+                error_log('🔧 DEBUG: Admin/Editor bypassing responsibility check for task rejection');
+            }
+        } else {
+            error_log('❌ User not responsible for task. Task sorumlu: ' . $task->sorumlu_id . ', Current user: ' . $current_user_id);
+            wp_send_json_error('Bu görevi sadece sorumlu kişi reddedebilir.');
+        }
     }
     
     if ($task->approval_status === 'rejected') {
