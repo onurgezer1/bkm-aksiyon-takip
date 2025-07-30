@@ -1869,7 +1869,18 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                                                     </form>
                                                                 <?php endif; ?>
                                                                 
-                                                                <?php if ($task->sorumlu_id == $current_user->ID || $is_admin || $is_editor): ?>
+                                                                <?php 
+                                                                // Check if user can see notes section
+                                                                // Participant users who rejected tasks cannot see notes
+                                                                $can_see_notes = ($task->sorumlu_id == $current_user->ID || $is_admin || $is_editor);
+                                                                $is_participant = ($task->sorumlu_id == $current_user->ID && !$is_admin && !$is_editor);
+                                                                $task_is_rejected = (isset($task->approval_status) && $task->approval_status === 'rejected');
+                                                                
+                                                                if ($is_participant && $task_is_rejected) {
+                                                                    $can_see_notes = false;
+                                                                }
+                                                                
+                                                                if ($can_see_notes): ?>
                                                                     <button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(<?php echo $task->id; ?>)">
                                                                         Not Ekle
                                                                     </button>
@@ -1883,7 +1894,17 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                                         </div>
                                                         
                                                         <!-- Note Form (hidden by default) -->
-                                                        <?php if ($task->sorumlu_id == $current_user->ID || $is_admin || $is_editor): ?>
+                                                        <?php 
+                                                        // Same logic for note form visibility
+                                                        $can_see_notes = ($task->sorumlu_id == $current_user->ID || $is_admin || $is_editor);
+                                                        $is_participant = ($task->sorumlu_id == $current_user->ID && !$is_admin && !$is_editor);
+                                                        $task_is_rejected = (isset($task->approval_status) && $task->approval_status === 'rejected');
+                                                        
+                                                        if ($is_participant && $task_is_rejected) {
+                                                            $can_see_notes = false;
+                                                        }
+                                                        
+                                                        if ($can_see_notes): ?>
                                                             <div id="note-form-<?php echo $task->id; ?>" class="bkm-note-form" style="display: none;">
                                                                 <form>
                                                                     <input type="hidden" name="task_id" value="<?php echo $task->id; ?>" />
@@ -2175,24 +2196,39 @@ function displayTasksInContainer(container, tasks, actionId) {
         // Task actions
         html += '<div class="bkm-task-actions" style="margin-top: 15px; text-align: right;">';
         
-        // Note buttons - Enhanced logic with better user feedback
-        if (canPerformOperations) {
+        // Note buttons - Enhanced logic with better user feedback and participant restrictions
+        var isParticipant = (task.sorumlu_id == <?php echo $current_user_id; ?> && !<?php echo $is_admin ? 'true' : 'false'; ?> && !<?php echo $is_editor ? 'true' : 'false'; ?>);
+        var canSeeNotes = canPerformOperations;
+        
+        // Participant users who rejected tasks cannot see notes
+        if (isParticipant && isRejected) {
+            canSeeNotes = false;
+        }
+        
+        if (canSeeNotes) {
             html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px;">📝 Not Ekle</button>';
             console.log('✅ Added active note button for approved task ' + task.id);
         } else if (isPending) {
             html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px; cursor: not-allowed;" disabled title="Görevi önce onaylamalısınız">📝 Not Ekle (Beklemede)</button>';
             console.log('⏳ Added disabled note button for pending task ' + task.id);
         } else if (isRejected) {
-            html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px; cursor: not-allowed;" disabled title="Reddedilen görevlere not eklenemez">📝 Not Ekle (Reddedildi)</button>';
-            console.log('❌ Added disabled note button for rejected task ' + task.id);
+            if (isParticipant) {
+                // Hide note button completely for participant users who rejected tasks
+                console.log('❌ Note button hidden for participant user who rejected task ' + task.id);
+            } else {
+                html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px; cursor: not-allowed;" disabled title="Reddedilen görevlere not eklenemez">📝 Not Ekle (Reddedildi)</button>';
+                console.log('❌ Added disabled note button for rejected task ' + task.id);
+            }
         } else {
             // Fallback for tasks with unknown approval status
             html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px; background: #8e44ad; color: white;" title="Not ekle">📝 Not Ekle</button>';
             console.log('⚠️ Added fallback note button for task ' + task.id + ' with unknown approval status: ' + task.approval_status);
         }
         
-        // Notes viewing is always available
-        html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')" style="margin-right: 8px;">💬 Notlar</button>';
+        // Notes viewing - hidden for participant users who rejected tasks
+        if (canSeeNotes || (!isParticipant || !isRejected)) {
+            html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')" style="margin-right: 8px;">💬 Notlar</button>';
+        }
         
         // NEW SIMPLIFIED APPROACH: Always show action buttons for better debugging
         console.log('🔍 NEW SYSTEM: Task ' + task.id + ' button logic:', {
@@ -2234,12 +2270,18 @@ function displayTasksInContainer(container, tasks, actionId) {
             }
         }
         
-        // SIMPLIFIED HISTORY AND EDIT BUTTONS - Show for admins/editors or in debug mode (only for approved/pending tasks)
+        // SIMPLIFIED HISTORY AND EDIT BUTTONS - Show for admins/editors only (not for participant users)
         <?php if ($is_editor || $is_admin || (defined('WP_DEBUG') && WP_DEBUG)): ?>
         if (!isRejected) { // Don't show edit/history for rejected tasks
             html += '<button class="bkm-btn bkm-btn-small" style="background: #ffc107; color: #212529; margin-right: 8px;" onclick="newShowTaskHistory(' + task.id + ')">📋 Geçmiş</button>';
-            html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px;" onclick="newEditTask(' + task.id + ')">✏️ Düzenle</button>';
-            console.log('✅ Added history and edit buttons for privileged user or debug mode');
+            // Only allow edit for admin/editor users, not participant users
+            if (<?php echo $is_admin ? 'true' : 'false'; ?> || <?php echo $is_editor ? 'true' : 'false'; ?>) {
+                html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px;" onclick="newEditTask(' + task.id + ')">✏️ Düzenle</button>';
+                console.log('✅ Added edit button for admin/editor user');
+            } else {
+                console.log('ℹ️ Edit button not added - participant users cannot edit tasks');
+            }
+            console.log('✅ Added history button for privileged user or debug mode');
         }
         <?php else: ?>
         console.log('ℹ️ History and edit buttons not added - insufficient permissions');
@@ -3017,7 +3059,7 @@ function showTaskHistory(taskId) {
 function displayTaskHistoryModal(history, taskId) {
     var modalHtml = `
         <div id="task-history-modal" class="bkm-modal-overlay" onclick="closeTaskHistoryModal(event)">
-            <div class="bkm-modal-content" onclick="event.stopPropagation()">
+            <div class="bkm-modal-content" onclick="event.stopPropagation()" style="width: 85%; max-width: 1200px;">
                 <div class="bkm-modal-header">
                     <h3>📋 Görev Geçmişi (ID: ${taskId})</h3>
                     <button type="button" class="bkm-modal-close" onclick="closeTaskHistoryModal()">&times;</button>
@@ -3816,7 +3858,7 @@ function showTaskHistoryModal(taskId, history) {
     modal.className = 'bkm-modal';
     modal.innerHTML = `
         <div class="bkm-modal-backdrop">
-            <div class="bkm-modal-content" style="max-width: 700px;">
+            <div class="bkm-modal-content" style="max-width: 1000px; width: 90%;">
                 <div class="bkm-modal-header">
                     <h3>📋 Görev Geçmişi (ID: ${taskId})</h3>
                     <button class="bkm-modal-close" onclick="closeBkmModal()">&times;</button>

@@ -3,7 +3,7 @@
  * Plugin Name: BKM AKSİYON TAKİP
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
  * Description: WordPress eklentisi ile aksiyon ve görev takip sistemi
- * Version: 1.2.2
+ * Version: 1.2.3
  * Author: Anadolu Birlik
  * Text Domain: bkm-aksiyon-takip
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BKM_AKSIYON_TAKIP_VERSION', '1.2.2');
+define('BKM_AKSIYON_TAKIP_VERSION', '1.2.3');
 define('BKM_AKSIYON_TAKIP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);
@@ -3233,6 +3233,34 @@ public function ajax_add_note() {
         wp_send_json_error('İlerleme durumu 0-100 arasında olmalıdır.');
     }
     
+    // Check task approval status and user permission for note adding
+    $tasks_table = $wpdb->prefix . 'bkm_tasks';
+    $task = $wpdb->get_row($wpdb->prepare("SELECT * FROM $tasks_table WHERE id = %d", $task_id));
+    
+    if (!$task) {
+        wp_send_json_error('Görev bulunamadı.');
+    }
+    
+    // Get current user role information
+    $current_user = wp_get_current_user();
+    $user_roles = $current_user->roles;
+    $is_admin = in_array('administrator', $user_roles) || current_user_can('manage_options');
+    $is_editor = in_array('editor', $user_roles) || current_user_can('edit_others_posts');
+    $is_participant = ($task->sorumlu_id == $current_user_id && !$is_admin && !$is_editor);
+    $task_is_rejected = (isset($task->approval_status) && $task->approval_status === 'rejected');
+    
+    // Participant users who rejected tasks cannot add notes
+    if ($is_participant && $task_is_rejected) {
+        error_log('❌ Participant user tried to add note to rejected task');
+        wp_send_json_error('Reddedilen görevlere not ekleyemezsiniz.');
+    }
+    
+    // Also check if task is approved for regular operations
+    if (!$is_admin && !$is_editor && $task->approval_status !== 'approved') {
+        error_log('❌ User tried to add note to non-approved task');
+        wp_send_json_error('Sadece onaylanmış görevlere not ekleyebilirsiniz.');
+    }
+    
     $table_name = $wpdb->prefix . 'bkm_task_notes';
     
     // Insert note with progress if provided
@@ -3996,11 +4024,17 @@ public function ajax_edit_task() {
         wp_send_json_error('Güvenlik kontrolü başarısız.');
     }
     
-    // Kullanıcı yetki kontrolü - Editor, Admin ve debug modunda tüm kullanıcılar düzenleyebilir
-    $can_edit = current_user_can('edit_others_posts') || (defined('WP_DEBUG') && WP_DEBUG);
+    // Kullanıcı yetki kontrolü - Sadece Editor ve Admin düzenleyebilir (sorumlu katılımcı kullanıcılar düzenleyemez)
+    $current_user = wp_get_current_user();
+    $user_roles = $current_user->roles;
+    $is_admin = in_array('administrator', $user_roles) || current_user_can('manage_options');
+    $is_editor = in_array('editor', $user_roles) || current_user_can('edit_others_posts');
+    
+    $can_edit = $is_admin || $is_editor || (defined('WP_DEBUG') && WP_DEBUG);
+    
     if (!$can_edit) {
-        error_log('❌ User does not have permission to edit tasks');
-        wp_send_json_error('Görev düzenleme yetkiniz bulunmamaktadır.');
+        error_log('❌ User does not have permission to edit tasks - participant users cannot edit');
+        wp_send_json_error('Görev düzenleme yetkiniz bulunmamaktadır. Sadece Editor ve Yönetici kullanıcıları görev düzenleyebilir.');
     }
     
     if (defined('WP_DEBUG') && WP_DEBUG && !current_user_can('edit_others_posts')) {
