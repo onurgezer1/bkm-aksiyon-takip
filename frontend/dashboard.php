@@ -2205,28 +2205,23 @@ function displayTasksInContainer(container, tasks, actionId) {
             canSeeNotes = false;
         }
         
-        if (canSeeNotes) {
+        // REJECTED TASKS: Don't show any note buttons
+        if (isRejected) {
+            console.log('❌ Task ' + task.id + ' is rejected - hiding all note buttons');
+        } else if (canSeeNotes) {
             html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px;">📝 Not Ekle</button>';
             console.log('✅ Added active note button for approved task ' + task.id);
         } else if (isPending) {
             html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px; cursor: not-allowed;" disabled title="Görevi önce onaylamalısınız">📝 Not Ekle (Beklemede)</button>';
             console.log('⏳ Added disabled note button for pending task ' + task.id);
-        } else if (isRejected) {
-            if (isParticipant) {
-                // Hide note button completely for participant users who rejected tasks
-                console.log('❌ Note button hidden for participant user who rejected task ' + task.id);
-            } else {
-                html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px; cursor: not-allowed;" disabled title="Reddedilen görevlere not eklenemez">📝 Not Ekle (Reddedildi)</button>';
-                console.log('❌ Added disabled note button for rejected task ' + task.id);
-            }
         } else {
             // Fallback for tasks with unknown approval status
             html += '<button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(' + task.id + ')" style="margin-right: 8px; background: #8e44ad; color: white;" title="Not ekle">📝 Not Ekle</button>';
             console.log('⚠️ Added fallback note button for task ' + task.id + ' with unknown approval status: ' + task.approval_status);
         }
         
-        // Notes viewing - hidden for participant users who rejected tasks
-        if (canSeeNotes || (!isParticipant || !isRejected)) {
+        // Notes viewing - hidden for rejected tasks completely  
+        if (!isRejected && (canSeeNotes || (!isParticipant || !isRejected))) {
             html += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleNotes(' + task.id + ')" style="margin-right: 8px;">💬 Notlar</button>';
         }
         
@@ -2270,9 +2265,13 @@ function displayTasksInContainer(container, tasks, actionId) {
             }
         }
         
-        // SIMPLIFIED HISTORY AND EDIT BUTTONS - Show for admins/editors only (not for participant users)
-        <?php if ($is_editor || $is_admin || (defined('WP_DEBUG') && WP_DEBUG)): ?>
-        if (!isRejected) { // Don't show edit/history for rejected tasks
+        // REJECTED TASKS: Show only status and rejection reason, NO BUTTONS
+        if (isRejected) {
+            // Only show rejection status and reason, no other buttons or actions
+            console.log('❌ Task ' + task.id + ' is rejected - hiding all action buttons');
+        } else {
+            // SIMPLIFIED HISTORY AND EDIT BUTTONS - Show for admins/editors only (not for participant users)
+            <?php if ($is_editor || $is_admin || (defined('WP_DEBUG') && WP_DEBUG)): ?>
             html += '<button class="bkm-btn bkm-btn-small" style="background: #ffc107; color: #212529; margin-right: 8px;" onclick="newShowTaskHistory(' + task.id + ')">📋 Geçmiş</button>';
             // Only allow edit for admin/editor users, not participant users
             if (<?php echo $is_admin ? 'true' : 'false'; ?> || <?php echo $is_editor ? 'true' : 'false'; ?>) {
@@ -2282,18 +2281,16 @@ function displayTasksInContainer(container, tasks, actionId) {
                 console.log('ℹ️ Edit button not added - participant users cannot edit tasks');
             }
             console.log('✅ Added history button for privileged user or debug mode');
-        }
-        <?php else: ?>
-        console.log('ℹ️ History and edit buttons not added - insufficient permissions');
-        <?php endif; ?>
-        
-        // Complete button (only for approved tasks that are not completed)
-        if (!isCompleted && canPerformOperations) {
-            html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="markTaskComplete(' + task.id + ')">✓ Tamamla</button>';
-        } else if (isPending && !isCompleted) {
-            html += '<span class="bkm-status-info" style="color: #856404; font-size: 12px; font-style: italic;">⏳ Görev onaylandıktan sonra işlem yapabilirsiniz</span>';
-        } else if (isRejected) {
-            html += '<span class="bkm-status-info" style="color: #721c24; font-size: 12px; font-style: italic;">❌ Reddedilen görevlerde işlem yapılamaz</span>';
+            <?php else: ?>
+            console.log('ℹ️ History and edit buttons not added - insufficient permissions');
+            <?php endif; ?>
+            
+            // Complete button (only for approved tasks that are not completed)
+            if (!isCompleted && canPerformOperations) {
+                html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="markTaskComplete(' + task.id + ')">✓ Tamamla</button>';
+            } else if (isPending && !isCompleted) {
+                html += '<span class="bkm-status-info" style="color: #856404; font-size: 12px; font-style: italic;">⏳ Görev onaylandıktan sonra işlem yapabilirsiniz</span>';
+            }
         }
         
         html += '</div>';
@@ -3858,7 +3855,7 @@ function showTaskHistoryModal(taskId, history) {
     modal.className = 'bkm-modal';
     modal.innerHTML = `
         <div class="bkm-modal-backdrop">
-            <div class="bkm-modal-content" style="max-width: 1000px; width: 90%;">
+            <div class="bkm-modal-content" style="max-width: 1400px; width: 95%;">
                 <div class="bkm-modal-header">
                     <h3>📋 Görev Geçmişi (ID: ${taskId})</h3>
                     <button class="bkm-modal-close" onclick="closeBkmModal()">&times;</button>
