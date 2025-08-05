@@ -769,10 +769,57 @@ jQuery(document).ready(function($) {
                     if (typeof toggleActionForm === 'function') {
                         toggleActionForm();
                     }
-                    // Page refresh to show new action
+                    // Aksiyon listesini yenile (sayfa reload yerine)
+                    showNotification('Aksiyon başarıyla eklendi, liste güncelleniyor...', 'success');
+                    
+                    // Daha uzun gecikme ekleyerek database sync emin olalım
+                    var refreshWithRetry = function(attempt) {
+                        attempt = attempt || 1;
+                        console.log('🔄 Refresh denemesi:', attempt);
+                        
+                        if (typeof refreshActions === 'function') {
+                            refreshActions();
+                        } else {
+                            console.warn('⚠️ refreshActions fonksiyonu bulunamadı, alternatif deneniyor...');
+                            
+                            // Alternative: direct AJAX call
+                            $.ajax({
+                                url: bkmFrontend.ajax_url,
+                                type: 'POST',
+                                data: {
+                                    action: 'bkm_get_actions',
+                                    nonce: bkmFrontend.nonce,
+                                    _: new Date().getTime()
+                                },
+                                success: function(response) {
+                                    if (response && response.success && response.data) {
+                                        updateActionsTable(response.data);
+                                        showNotification('Liste güncellendi!', 'success');
+                                    } else {
+                                        // Retry or fallback to page reload
+                                        if (attempt < 3) {
+                                            setTimeout(function() { refreshWithRetry(attempt + 1); }, 1000);
+                                        } else {
+                                            showNotification('Liste güncellenemedi, sayfa yenileniyor...', 'warning');
+                                            setTimeout(function() { window.location.reload(); }, 2000);
+                                        }
+                                    }
+                                },
+                                error: function() {
+                                    if (attempt < 3) {
+                                        setTimeout(function() { refreshWithRetry(attempt + 1); }, 1000);
+                                    } else {
+                                        setTimeout(function() { window.location.reload(); }, 2000);
+                                    }
+                                }
+                            });
+                        }
+                    };
+                    
+                    // Kısa gecikme ile başlat
                     setTimeout(function() {
-                        window.location.reload();
-                    }, 1500);
+                        refreshWithRetry(1);
+                    }, 1000);
                 } else {
                     var errorMessage = 'Aksiyon eklenirken hata oluştu.';
                     if (response && response.data) {
@@ -925,9 +972,16 @@ jQuery(document).ready(function($) {
                         toggleTaskForm();
                     }
                     // Page refresh to show new task
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 1500);
+                    showNotification('Görev başarıyla eklendi, liste güncelleniyor...', 'success');
+                    if (typeof refreshActions === 'function') {
+                        setTimeout(function() {
+                            refreshActions();
+                        }, 500);
+                    } else {
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    }
                 } else {
                     var errorMessage = 'Görev eklenirken hata oluştu.';
                     if (response && response.data) {
@@ -2317,18 +2371,8 @@ window.clearActionForm = clearActionForm;
 window.loadUsers = loadUsers;
 window.handleUserFormSubmit = handleUserFormSubmit;
 
-window.toggleTasks = function(actionId) {
-    console.log('🔧 toggleTasks çağrıldı, actionId:', actionId);
-    var tasksRow = jQuery('#tasks-' + actionId);
-    console.log('📝 Tasks row bulundu:', tasksRow.length);
-    
-    if (tasksRow.length > 0) {
-        tasksRow.slideToggle();
-    } else {
-        console.error('❌ Tasks row bulunamadı, ID:', '#tasks-' + actionId);
-        showNotification('Görevler bölümü bulunamadı.', 'error');
-    }
-}
+// toggleTasks function is implemented in dashboard.php with AJAX functionality
+// Removed duplicate implementation to prevent override
 
 window.toggleActionDetails = function(actionId) {
     console.log('🔧 toggleActionDetails çağrıldı, actionId:', actionId);
@@ -2507,7 +2551,7 @@ window.loadTaskNotes = function(taskId, callback) {
                         notesHtml += '<div class="bkm-note-indicator"></div>';
                         notesHtml += '<div class="bkm-note-content-wrapper">';
                         notesHtml += '<div class="bkm-note-meta">';
-                        notesHtml += '<span class="bkm-note-author">👤 ' + (note.author_name || 'Bilinmeyen') + '</span>';
+                        notesHtml += '<span class="bkm-note-author">👤 ' + (note.user_name || note.author_name || 'Bilinmeyen') + '</span>';
                         notesHtml += '<span class="bkm-note-date">📅 ' + (note.created_at || 'Tarih yok') + '</span>';
                         notesHtml += '</div>';
                         notesHtml += '<div class="bkm-note-content">' + (note.content || '[İçerik yok]') + '</div>';
@@ -2534,7 +2578,7 @@ window.loadTaskNotes = function(taskId, callback) {
                                 notesHtml += '<div class="bkm-reply-arrow">↳</div>';
                                 notesHtml += '<div class="bkm-note-content-wrapper">';
                                 notesHtml += '<div class="bkm-note-meta">';
-                                notesHtml += '<span class="bkm-note-author">👤 ' + (reply.author_name || 'Bilinmeyen') + '</span>';
+                                notesHtml += '<span class="bkm-note-author">👤 ' + (reply.user_name || reply.author_name || 'Bilinmeyen') + '</span>';
                                 notesHtml += '<span class="bkm-note-date">📅 ' + (reply.created_at || 'Tarih yok') + '</span>';
                                 notesHtml += '<span class="bkm-reply-badge">Cevap</span>';
                                 notesHtml += '</div>';
@@ -2729,6 +2773,413 @@ window.toggleReplyForm = function(taskId, noteId) {
     // - escapeHtml()
     // - escapeJs()
     
+    // Global user cache
+    var usersCache = {};
+
+    // Simple notification system
+    function showNotification(message, type) {
+        type = type || 'info';
+        console.log('📢 Notification (' + type + '):', message);
+        
+        // Create notification element
+        var notification = $('<div class="bkm-notification bkm-notification-' + type + '">' + message + '</div>');
+        
+        // Add to page
+        if ($('.bkm-notifications').length === 0) {
+            $('body').append('<div class="bkm-notifications"></div>');
+        }
+        
+        $('.bkm-notifications').append(notification);
+        
+        // Auto remove after 3 seconds
+        setTimeout(function() {
+            notification.fadeOut(300, function() {
+                $(this).remove();
+            });
+        }, 3000);
+    }
+
+    // Actions refresh fonksiyonu
+    function refreshActions(showNotifications) {
+        // Default to true if not specified for backwards compatibility
+        if (showNotifications === undefined) {
+            showNotifications = true;
+        }
+        
+        console.log('🔄 refreshActions çağrıldı, showNotifications:', showNotifications);
+        
+        // Frontend objesinin varlığını kontrol et
+        if (typeof bkmFrontend === 'undefined' || !bkmFrontend.ajax_url) {
+            console.error('❌ bkmFrontend objesi bulunamadı, sayfa yenileniyor...');
+            if (showNotifications) {
+                showNotification('Sistem hazır değil, sayfa yenileniyor...', 'warning');
+            }
+            setTimeout(function() {
+                window.location.reload();
+            }, 1500);
+            return;
+        }
+        
+        $.ajax({
+            url: bkmFrontend.ajax_url,
+            type: 'POST',
+            cache: false, // Cache busting
+            dataType: 'json',
+            timeout: 30000,
+            data: {
+                action: 'bkm_get_actions',
+                nonce: bkmFrontend.nonce,
+                _: new Date().getTime() // Timestamp for cache busting
+            },
+            success: function(response) {
+                console.log('✅ Actions refresh başarılı:', response);
+                
+                if (response && response.success && response.data) {
+                    updateActionsTable(response.data);
+                    updateActionDropdown(response.data); // Görev ekleme formundaki dropdown'ı da güncelle
+                    
+                    // Only show notification if requested
+                    if (showNotifications) {
+                        showNotification('Aksiyon listesi güncellendi (' + response.data.length + ' aksiyon)', 'success');
+                    }
+                } else {
+                    console.error('❌ Aksiyon listesi yenilenemedi:', response);
+                    
+                    // Only show error notification if requested
+                    if (showNotifications) {
+                        showNotification('Aksiyon listesi yenilenemedi - yanıt formatı hatalı', 'error');
+                    }
+                    
+                    // Debug için response'u tam göster
+                    if (typeof response === 'object') {
+                        console.log('📋 Response detayı:', JSON.stringify(response, null, 2));
+                    }
+                    
+                    // Fallback: sayfa yenile
+                    setTimeout(function() {
+                        console.log('🔄 Fallback: sayfa yenileniyor...');
+                        window.location.reload();
+                    }, 3000);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX hatası:', error, xhr.responseText);
+                showNotification('Aksiyon listesi yenilenemedi: ' + error, 'error');
+                
+                // Fallback olarak sayfa yenile (3 saniye sonra)
+                setTimeout(function() {
+                    window.location.reload();
+                }, 3000);
+            }
+        });
+    }
+
+    // Görev ekleme formundaki aksiyon dropdown'ını güncelle
+    function updateActionDropdown(actions) {
+        console.log('🔄 Aksiyon dropdown güncelleniyor, action count:', actions.length);
+        
+        var actionSelect = $('#action_id');
+        if (actionSelect.length === 0) {
+            console.log('📝 Aksiyon dropdown bulunamadı (görev ekleme formu kapalı)');
+            return;
+        }
+
+        // Mevcut seçimi koru
+        var currentValue = actionSelect.val();
+        
+        // Dropdown'ı temizle ve yeniden doldur
+        actionSelect.empty();
+        actionSelect.append('<option value="">Seçiniz...</option>');
+        
+        actions.forEach(function(action) {
+            var title = action.tespit_konusu || action.title || action.aciklama || '';
+            var shortTitle = title.length > 50 ? title.substring(0, 50) + '...' : title;
+            var optionText = '#' + action.id + ' - ' + shortTitle;
+            
+            var option = $('<option>').val(action.id).text(optionText);
+            actionSelect.append(option);
+        });
+        
+        // Önceki seçimi geri yükle (eğer hala mevcut ise)
+        if (currentValue && actionSelect.find('option[value="' + currentValue + '"]').length > 0) {
+            actionSelect.val(currentValue);
+        }
+        
+        console.log('✅ Aksiyon dropdown güncellendi: ' + actions.length + ' seçenek');
+    }
+
+    // Actions tablosunu güncelleme fonksiyonu - PHP dashboard.php ile uyumlu
+    function updateActionsTable(actions) {
+        console.log('🔄 Actions tablosu güncelleniyor, action count:', actions.length);
+        
+        var tbody = $('.bkm-table tbody');
+        if (tbody.length === 0) {
+            console.error('Actions table tbody bulunamadı');
+            showNotification('Tablo bulunamadı, sayfa yenileniyor...', 'warning');
+            setTimeout(function() {
+                window.location.reload();
+            }, 2000);
+            return;
+        }
+
+        // Mevcut tüm dynamic rowları temizle
+        tbody.find('tr').remove();
+
+        if (actions.length === 0) {
+            tbody.append('<tr><td colspan="9">Henüz aksiyon bulunmamaktadır.</td></tr>');
+            // Filter dropdowns'ları da temizle
+            updateFilterDropdowns([]);
+            return;
+        }
+
+        // Filter dropdowns'ları güncelle
+        updateFilterDropdowns(actions);
+
+        actions.forEach(function(action) {
+            // Ana action row
+            var row = $('<tr>');
+            
+            // Data attributes for filtering (dashboard.php'de olduğu gibi)
+            row.attr('data-tanimlayan', action.tanımlayan_name || 'Bilinmiyor');
+            row.attr('data-kategori', action.kategori_name || '');
+            row.attr('data-onem', action.onem_derecesi || 1);
+            row.attr('data-ilerleme', action.ilerleme_durumu || 0);
+            
+            // Sorumlu kişiler için data attribute'u hazırla
+            var sorumluNamesForData = [];
+            if (action.sorumlu_ids) {
+                var sorumluIds = action.sorumlu_ids.split(',');
+                sorumluIds.forEach(function(id) {
+                    var userId = id.trim();
+                    var user = getUserFromCache(userId);
+                    if (user) {
+                        var displayName = user.display_name || user.user_login || 'Kullanıcı ' + userId;
+                        sorumluNamesForData.push(displayName);
+                    }
+                });
+            }
+            row.attr('data-sorumlu', sorumluNamesForData.join(','));
+            
+            // Status hesaplama (dashboard.php logic)
+            var ilerleme = parseInt(action.ilerleme_durumu || 0);
+            var status = action.status || '';
+            if (!status) {
+                if (ilerleme == 0) {
+                    status = 'open';
+                } else if (ilerleme >= 1 && ilerleme <= 99) {
+                    status = 'active';
+                } else if (ilerleme == 100) {
+                    status = 'completed';
+                }
+            }
+            row.attr('data-durum', status);
+            
+            // ID
+            row.append('<td>' + action.id + '</td>');
+            
+            // Tanımlayan
+            row.append('<td>' + escapeHtml(action.tanımlayan_name || 'Bilinmiyor') + '</td>');
+            
+            // Sorumlu Kişiler (dashboard.php stilinde)
+            var sorumluCell = '<td>';
+            if (action.sorumlu_ids) {
+                var sorumluIds = action.sorumlu_ids.split(',');
+                var sorumluNames = [];
+                
+                // PHP'de get_user_by kullanıldığı gibi, cache'den isim al
+                sorumluIds.forEach(function(id) {
+                    var userId = id.trim();
+                    var user = getUserFromCache(userId);
+                    if (user) {
+                        var displayName = user.display_name || user.user_login || 'Kullanıcı ' + userId;
+                        sorumluNames.push(displayName);
+                    }
+                });
+                
+                if (sorumluNames.length > 0) {
+                    sorumluCell += '<div class="bkm-responsible-users-elegant">';
+                    sorumluNames.forEach(function(name, index) {
+                        sorumluCell += '<div class="bkm-user-chip">';
+                        sorumluCell += '<span class="bkm-user-avatar">' + escapeHtml(name.charAt(0).toUpperCase()) + '</span>';
+                        sorumluCell += '<span class="bkm-user-name">' + escapeHtml(name) + '</span>';
+                        sorumluCell += '</div>';
+                        if (index < sorumluNames.length - 1) {
+                            sorumluCell += '<div class="bkm-user-separator">•</div>';
+                        }
+                    });
+                    sorumluCell += '</div>';
+                } else {
+                    sorumluCell += '-';
+                }
+            } else {
+                sorumluCell += '-';
+            }
+            sorumluCell += '</td>';
+            row.append(sorumluCell);
+            
+            // Kategori
+            row.append('<td>' + escapeHtml(action.kategori_name || '') + '</td>');
+            
+            // Tespit Konusu (dashboard.php'de substr(0, 100) kullanılıyor)
+            var tespitKonusu = action.tespit_konusu || '';
+            if (tespitKonusu.length > 100) {
+                tespitKonusu = tespitKonusu.substring(0, 100) + '...';
+            }
+            row.append('<td class="bkm-action-tespit">' + escapeHtml(tespitKonusu) + '</td>');
+            
+            // Önem (dashboard.php mantığı)
+            var onemText = '';
+            var onemDerecesi = parseInt(action.onem_derecesi || 1);
+            switch(onemDerecesi) {
+                case 1: onemText = 'Düşük'; break;
+                case 2: onemText = 'Orta'; break;
+                case 3: onemText = 'Yüksek'; break;
+                default: onemText = 'Düşük'; break;
+            }
+            var onemCell = '<span class="bkm-priority priority-' + onemDerecesi + '">' + onemText + '</span>';
+            row.append('<td>' + onemCell + '</td>');
+            
+            // İlerleme (dashboard.php stilinde)
+            var progressCell = '<div class="bkm-progress" data-action-id="' + action.id + '">';
+            progressCell += '<div class="bkm-progress-bar" style="width: ' + ilerleme + '%"></div>';
+            progressCell += '<span class="bkm-progress-text">' + ilerleme + '%</span>';
+            progressCell += '</div>';
+            row.append('<td>' + progressCell + '</td>');
+            
+            // Durum (dashboard.php config'i)
+            var statusConfig = {
+                'open': {icon: '🔴', text: 'AÇIK', class: 'status-open'},
+                'active': {icon: '🟡', text: 'DEVAM EDİYOR', class: 'status-active'},
+                'completed': {icon: '🟢', text: 'TAMAMLANDI', class: 'status-completed'}
+            };
+            var config = statusConfig[status] || statusConfig['open'];
+            var statusCell = '<div class="bkm-status-elegant ' + config.class + ' bkm-action-status" data-action-id="' + action.id + '">';
+            statusCell += '<span class="bkm-status-icon">' + config.icon + '</span>';
+            statusCell += '<span class="bkm-status-text">' + config.text + '</span>';
+            statusCell += '</div>';
+            row.append('<td>' + statusCell + '</td>');
+            
+            // Görevler
+            var gorevCell = '<div class="bkm-action-buttons-cell">';
+            gorevCell += '<button class="bkm-btn bkm-btn-small bkm-btn-info" onclick="toggleActionDetails(' + action.id + ')">📋 Detaylar</button>';
+            gorevCell += '<button class="bkm-btn bkm-btn-small" onclick="toggleTasks(' + action.id + ')">📝 Görevler (' + (action.task_count || 0) + ')</button>';
+            gorevCell += '</div>';
+            row.append('<td>' + gorevCell + '</td>');
+            
+            tbody.append(row);
+            
+            // Action details row ekle (dashboard.php'de olduğu gibi) - şimdilik boş
+            var detailsRow = $('<tr id="details-' + action.id + '" class="bkm-action-details-row" style="display: none;">');
+            detailsRow.append('<td colspan="9"><div class="bkm-action-details-container">Detaylar yükleniyor...</div></td>');
+            tbody.append(detailsRow);
+            
+            // Tasks row ekle (dashboard.php'de olduğu gibi) - boş container
+            var tasksRow = $('<tr id="tasks-' + action.id + '" class="bkm-tasks-row" style="display: none;">');
+            tasksRow.append('<td colspan="9"><div class="bkm-tasks-container"><h4>Görevler</h4><p>Görevler yükleniyor...</p></div></td>');
+            tbody.append(tasksRow);
+        });
+        
+        console.log('✅ Actions tablosu güncellendi, toplam row:', tbody.find('tr').length);
+    }
+
+    // Helper fonksiyonları
+    function getUserFromCache(userId) {
+        userId = parseInt(userId);
+        if (window.usersCache && window.usersCache[userId]) {
+            return window.usersCache[userId];
+        }
+        return null;
+    }
+    
+    function getUserDisplayName(userId) {
+        var user = getUserFromCache(userId);
+        if (user) {
+            return user.display_name || user.user_login || 'User ' + userId;
+        }
+        return 'User ' + userId;
+    }
+
+    function getOnemBadge(onem) {
+        var badges = {
+            'YÜKSEK': '<span class="bkm-onem-badge yuksek">YÜKSEK</span>',
+            'ORTA': '<span class="bkm-onem-badge orta">ORTA</span>',
+            'DÜŞÜK': '<span class="bkm-onem-badge dusuk">DÜŞÜK</span>'
+        };
+        return badges[onem] || '<span class="bkm-onem-badge orta">ORTA</span>';
+    }
+
+    function getDurumBadge(durum) {
+        var badges = {
+            'ACİL': '<span class="bkm-durum-badge acil">ACİL</span>',
+            'NORMAL': '<span class="bkm-durum-badge normal">NORMAL</span>',
+            'BEKLEMEDE': '<span class="bkm-durum-badge beklemede">BEKLEMEDE</span>'
+        };
+        return badges[durum] || '<span class="bkm-durum-badge normal">NORMAL</span>';
+    }
+
+    // Filter dropdown'larını güncelleme fonksiyonu
+    function updateFilterDropdowns(actions) {
+        console.log('🔍 Filter dropdown\'ları güncelleniyor, action count:', actions.length);
+        
+        // Sorumlu kişiler listesini topla
+        var sorumluKişiler = [];
+        var kategoriler = [];
+        
+        actions.forEach(function(action) {
+            // Sorumlu kişiler
+            if (action.sorumlu_ids) {
+                var sorumluIds = action.sorumlu_ids.split(',');
+                sorumluIds.forEach(function(id) {
+                    var userId = id.trim();
+                    var user = getUserFromCache(userId);
+                    if (user) {
+                        var displayName = user.display_name || user.user_login || 'Kullanıcı ' + userId;
+                        if (sorumluKişiler.indexOf(displayName) === -1) {
+                            sorumluKişiler.push(displayName);
+                        }
+                    }
+                });
+            }
+            
+            // Kategoriler
+            if (action.kategori_name && kategoriler.indexOf(action.kategori_name) === -1) {
+                kategoriler.push(action.kategori_name);
+            }
+        });
+        
+        // Sırala
+        sorumluKişiler.sort();
+        kategoriler.sort();
+        
+        // Sorumlu kişiler dropdown'ını güncelle
+        var sorumluSelect = $('#filter-sorumlu');
+        var currentSorumluValue = sorumluSelect.val();
+        sorumluSelect.empty().append('<option value="">Tümü</option>');
+        sorumluKişiler.forEach(function(sorumlu) {
+            var option = $('<option>').val(sorumlu).text(sorumlu);
+            sorumluSelect.append(option);
+        });
+        // Önceki seçimi geri yükle (eğer hala mevcut ise)
+        if (currentSorumluValue && sorumluSelect.find('option[value="' + currentSorumluValue + '"]').length > 0) {
+            sorumluSelect.val(currentSorumluValue);
+        }
+        
+        // Kategori dropdown'ını güncelle
+        var kategoriSelect = $('#filter-kategori');
+        var currentKategoriValue = kategoriSelect.val();
+        kategoriSelect.empty().append('<option value="">Tümü</option>');
+        kategoriler.forEach(function(kategori) {
+            var option = $('<option>').val(kategori).text(kategori);
+            kategoriSelect.append(option);
+        });
+        // Önceki seçimi geri yükle (eğer hala mevcut ise)
+        if (currentKategoriValue && kategoriSelect.find('option[value="' + currentKategoriValue + '"]').length > 0) {
+            kategoriSelect.val(currentKategoriValue);
+        }
+        
+        console.log('✅ Filter dropdown\'ları güncellendi:', sorumluKişiler.length + ' sorumlu,', kategoriler.length + ' kategori');
+    }
+
     // Dropdown refresh fonksiyonları
     function refreshCategoryDropdown() {
         console.log('🔄 Kategori dropdown ve liste yenileniyor...');
@@ -2957,6 +3408,9 @@ window.toggleReplyForm = function(taskId, noteId) {
     window.refreshCategoryList = refreshCategoryList;
     window.refreshPerformanceDropdown = refreshPerformanceDropdown;
     window.refreshPerformanceList = refreshPerformanceList;
+    window.refreshActions = refreshActions;
+    window.updateActionsTable = updateActionsTable;
+    window.updateActionDropdown = updateActionDropdown;
     window.displayUsers = displayUsers;
     window.handleUserFormSubmit = handleUserFormSubmit;
     window.clearUserForm = clearUserForm;
@@ -2967,6 +3421,34 @@ window.toggleReplyForm = function(taskId, noteId) {
         console.log('📋 BKM Frontend JS yüklendi');
         console.log('✅ jQuery versiyonu:', $.fn.jquery);
         console.log('🎯 BKM Container:', $('.bkm-frontend-container').length > 0 ? 'Bulundu' : 'Bulunamadı');
+        
+        // Filter event listeners
+        console.log('🔍 Filtre event listener\'ları kuruluyor...');
+        
+        // Filter dropdown change events
+        $(document).on('change', '.bkm-filter-select', function() {
+            console.log('🔍 Filtre değişti:', $(this).attr('id'), '=', $(this).val());
+            applyFilters();
+        });
+        
+        // Initial filter setup
+        setTimeout(function() {
+            if ($('.bkm-filter-select').length > 0) {
+                console.log('✅ ' + $('.bkm-filter-select').length + ' filtre dropdown\'ı bulundu');
+                // Apply filters on page load if any are pre-selected
+                applyFilters();
+            }
+        }, 1000);
+        
+        // Sayfa yüklendiğinde aksiyon dropdown'ını da güncelle
+        if ($('#action_id').length > 0) {
+            console.log('📝 Görev ekleme formu tespit edildi, aksiyon dropdown yükleniyor...');
+            // 2 saniye gecikme ile dropdown'ı güncelle (sayfa tam yüklendikten sonra)
+            // Silent refresh - no notifications on page load
+            setTimeout(function() {
+                refreshActions(false);
+            }, 2000);
+        }
         
         // CSS fix - WordPress tema çakışmalarını çöz
         $('head').append(`
@@ -3070,10 +3552,7 @@ window.switchSettingsTab = window.switchSettingsTab || function(tabName) {
 };
 
 // Aksiyon ve görev detay fonksiyonları
-window.toggleTasks = window.toggleTasks || function(actionId) {
-    console.log('🔧 toggleTasks çağrıldı (fallback):', actionId);
-    jQuery('#tasks-' + actionId).slideToggle();
-};
+// toggleTasks is handled by dashboard.php - no fallback needed
 
 window.toggleActionDetails = window.toggleActionDetails || function(actionId) {
     console.log('🔧 toggleActionDetails çağrıldı (fallback):', actionId);
@@ -3469,11 +3948,11 @@ window.resetCompanyForm = resetCompanyForm;
 window.loadCompanyInfo = loadCompanyInfo;
 window.updateCompanyInfoDisplay = updateCompanyInfoDisplay;
 
-// Ensure all critical functions are globally available
+// Ensure all critical functions are globally available (except toggleTasks which is in dashboard.php)
 window.toggleNotes = window.toggleNotes;
 window.toggleNoteForm = window.toggleNoteForm;
 window.toggleActionDetails = window.toggleActionDetails;
-window.toggleTasks = window.toggleTasks;
+// window.toggleTasks is handled by dashboard.php
 window.toggleActionForm = window.toggleActionForm;
 window.toggleTaskForm = window.toggleTaskForm;
 window.toggleSettingsPanel = window.toggleSettingsPanel;
@@ -3485,7 +3964,7 @@ console.log('🔧 Mevcut global fonksiyonlar:', {
     toggleNotes: typeof window.toggleNotes,
     toggleNoteForm: typeof window.toggleNoteForm,
     toggleActionDetails: typeof window.toggleActionDetails,
-    toggleTasks: typeof window.toggleTasks,
+    toggleTasks: 'handled by dashboard.php',
     toggleActionForm: typeof window.toggleActionForm,
     toggleTaskForm: typeof window.toggleTaskForm,
     showNotification: typeof window.showNotification,
@@ -3494,13 +3973,235 @@ console.log('🔧 Mevcut global fonksiyonlar:', {
     removeCompanyLogo: typeof window.removeCompanyLogo
 });
 
-// Filtreleri temizle fonksiyonu
+// ===== FİLTRE FONKSİYONLARI =====
+
+/**
+ * Apply filters to action table rows
+ */
+function applyFilters() {
+    console.log('🔍 applyFilters çağrıldı');
+    
+    var tanimlayanFilter = jQuery('#filter-tanimlayan').val();
+    var sorumluFilter = jQuery('#filter-sorumlu').val();
+    var kategoriFilter = jQuery('#filter-kategori').val();
+    var onemFilter = jQuery('#filter-onem').val();
+    var durumFilter = jQuery('#filter-durum').val();
+    
+    console.log('🔍 Aktif filtreler:', {
+        tanimlayan: tanimlayanFilter,
+        sorumlu: sorumluFilter,
+        kategori: kategoriFilter,
+        onem: onemFilter,
+        durum: durumFilter
+    });
+    
+    var visibleCount = 0;
+    var totalCount = 0;
+    
+    // Her action row'unu kontrol et
+    jQuery('.bkm-table tbody tr').each(function() {
+        var row = jQuery(this);
+        
+        // Skip detail rows (action details, tasks, etc.)
+        if (row.hasClass('bkm-action-details-row') || row.hasClass('bkm-tasks-row')) {
+            return; // continue
+        }
+        
+        totalCount++;
+        
+        var rowTanimlayan = row.attr('data-tanimlayan') || '';
+        var rowSorumlu = row.attr('data-sorumlu') || '';
+        var rowKategori = row.attr('data-kategori') || '';
+        var rowOnem = row.attr('data-onem') || '';
+        var rowDurum = row.attr('data-durum') || '';
+        
+        var isVisible = true;
+        
+        // Tanımlayan filtresi
+        if (tanimlayanFilter && tanimlayanFilter !== '') {
+            if (rowTanimlayan !== tanimlayanFilter) {
+                isVisible = false;
+            }
+        }
+        
+        // Sorumlu kişi filtresi
+        if (sorumluFilter && sorumluFilter !== '') {
+            // Sorumlu kişi data-sorumlu'da virgülle ayrılmış isimler olarak bulunuyor
+            var sorumluNames = rowSorumlu.split(',').map(function(name) {
+                return name.trim();
+            });
+            
+            if (sorumluNames.indexOf(sorumluFilter) === -1) {
+                isVisible = false;
+            }
+        }
+        
+        // Kategori filtresi
+        if (kategoriFilter && kategoriFilter !== '') {
+            if (rowKategori !== kategoriFilter) {
+                isVisible = false;
+            }
+        }
+        
+        // Önem filtresi
+        if (onemFilter && onemFilter !== '') {
+            if (rowOnem !== onemFilter) {
+                isVisible = false;
+            }
+        }
+        
+        // Durum filtresi
+        if (durumFilter && durumFilter !== '') {
+            if (rowDurum !== durumFilter) {
+                isVisible = false;
+            }
+        }
+        
+        // Row'u göster/gizle
+        if (isVisible) {
+            row.removeClass('filtered-out').show();
+            visibleCount++;
+        } else {
+            row.addClass('filtered-out').hide();
+        }
+    });
+    
+    console.log('✅ Filtreleme tamamlandı:', visibleCount + '/' + totalCount + ' aksiyon görünüyor');
+    
+    // Active filters display güncellemesi
+    updateActiveFiltersDisplay();
+    
+    // Notification göster
+    if (totalCount > 0) {
+        var message = visibleCount + ' / ' + totalCount + ' aksiyon görüntüleniyor';
+        if (visibleCount === 0) {
+            message = 'Hiçbir aksiyon filtrelere uymuyor';
+        }
+        showNotification(message, visibleCount > 0 ? 'info' : 'warning');
+    }
+}
+
+/**
+ * Update active filters display
+ */
+function updateActiveFiltersDisplay() {
+    var activeFilters = [];
+    var activeFiltersContainer = jQuery('#active-filters');
+    var activeFiltersList = jQuery('#active-filters-list');
+    
+    // Check each filter and collect active ones
+    var tanimlayanFilter = jQuery('#filter-tanimlayan').val();
+    var sorumluFilter = jQuery('#filter-sorumlu').val();
+    var kategoriFilter = jQuery('#filter-kategori').val();
+    var onemFilter = jQuery('#filter-onem').val();
+    var durumFilter = jQuery('#filter-durum').val();
+    
+    if (tanimlayanFilter) {
+        activeFilters.push({
+            label: '👤 Tanımlayan: ' + tanimlayanFilter,
+            type: 'tanimlayan',
+            value: tanimlayanFilter
+        });
+    }
+    
+    if (sorumluFilter) {
+        activeFilters.push({
+            label: '👥 Sorumlu: ' + sorumluFilter,
+            type: 'sorumlu',
+            value: sorumluFilter
+        });
+    }
+    
+    if (kategoriFilter) {
+        activeFilters.push({
+            label: '🏷️ Kategori: ' + kategoriFilter,
+            type: 'kategori',
+            value: kategoriFilter
+        });
+    }
+    
+    if (onemFilter) {
+        var onemLabels = {1: 'Düşük', 2: 'Orta', 3: 'Yüksek'};
+        activeFilters.push({
+            label: '⚡ Önem: ' + (onemLabels[onemFilter] || onemFilter),
+            type: 'onem',
+            value: onemFilter
+        });
+    }
+    
+    if (durumFilter) {
+        var durumLabels = {open: 'AÇIK', active: 'DEVAM EDİYOR', completed: 'TAMAMLANDI'};
+        activeFilters.push({
+            label: '📊 Durum: ' + (durumLabels[durumFilter] || durumFilter),
+            type: 'durum',
+            value: durumFilter
+        });
+    }
+    
+    if (activeFilters.length > 0) {
+        var html = '';
+        activeFilters.forEach(function(filter) {
+            html += '<span class="bkm-filter-tag">';
+            html += filter.label;
+            html += '<button class="bkm-filter-tag-close" onclick="removeFilter(\'' + filter.type + '\')">&times;</button>';
+            html += '</span>';
+        });
+        
+        activeFiltersList.html(html);
+        activeFiltersContainer.show();
+    } else {
+        activeFiltersContainer.hide();
+    }
+}
+
+/**
+ * Remove a specific filter
+ */
+function removeFilter(filterType) {
+    console.log('🗑️ Filtre kaldırılıyor:', filterType);
+    
+    switch(filterType) {
+        case 'tanimlayan':
+            jQuery('#filter-tanimlayan').val('');
+            break;
+        case 'sorumlu':
+            jQuery('#filter-sorumlu').val('');
+            break;
+        case 'kategori':
+            jQuery('#filter-kategori').val('');
+            break;
+        case 'onem':
+            jQuery('#filter-onem').val('');
+            break;
+        case 'durum':
+            jQuery('#filter-durum').val('');
+            break;
+    }
+    
+    // Filtreleri yeniden uygula
+    applyFilters();
+}
+
+/**
+ * Clear all filters
+ */
 function clearAllFilters() {
+    console.log('🗑️ Tüm filtreler temizleniyor');
+    
     jQuery('#filter-tanimlayan').val('');
     jQuery('#filter-sorumlu').val('');
     jQuery('#filter-kategori').val('');
     jQuery('#filter-onem').val('');
     jQuery('#filter-durum').val('');
-    jQuery('.bkm-filter-select').trigger('change');
+    
+    // Filtreleri uygula (tümünü gösterir)
+    applyFilters();
+    
+    showNotification('Tüm filtreler temizlendi', 'success');
 }
+
+// Global olarak erişilebilir yap
+window.applyFilters = applyFilters;
+window.updateActiveFiltersDisplay = updateActiveFiltersDisplay;
+window.removeFilter = removeFilter;
 window.clearAllFilters = clearAllFilters;
