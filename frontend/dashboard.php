@@ -847,6 +847,8 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
 }
 
 .bkm-modal-content {
@@ -856,6 +858,36 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
     width: 90% !important;
     max-height: 90vh !important;
     overflow-y: auto !important;
+    position: relative !important;
+    margin: auto !important;
+    padding: 0 !important;
+    border: 1px solid #ddd !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+
+/* Enhanced modal width for task history - ensures proper wide display */
+#task-history-modal .bkm-modal-content,
+.bkm-modal .bkm-modal-content[style*="1600px"] {
+    width: 95% !important;
+    max-width: 1600px !important;
+    min-width: 800px !important;
+}
+
+@media (max-width: 1700px) {
+    #task-history-modal .bkm-modal-content,
+    .bkm-modal .bkm-modal-content[style*="1600px"] {
+        width: 98% !important;
+        max-width: 1400px !important;
+    }
+}
+
+@media (max-width: 1200px) {
+    #task-history-modal .bkm-modal-content,
+    .bkm-modal .bkm-modal-content[style*="1600px"] {
+        width: 95% !important;
+        max-width: 1000px !important;
+    }
 }
 
 .bkm-modal-header {
@@ -2269,28 +2301,31 @@ function displayTasksInContainer(container, tasks, actionId) {
         if (isRejected) {
             // Only show rejection status and reason, no other buttons or actions
             console.log('❌ Task ' + task.id + ' is rejected - hiding all action buttons');
+            // Early return for rejected tasks - do not add any buttons or forms
+            html += '</div>';
+            return html;
+        }
+        
+        // SIMPLIFIED HISTORY AND EDIT BUTTONS - Show for admins/editors only (not for participant users)
+        <?php if ($is_editor || $is_admin || (defined('WP_DEBUG') && WP_DEBUG)): ?>
+        html += '<button class="bkm-btn bkm-btn-small" style="background: #ffc107; color: #212529; margin-right: 8px;" onclick="newShowTaskHistory(' + task.id + ')">📋 Geçmiş</button>';
+        // Only allow edit for admin/editor users, not participant users
+        if (<?php echo $is_admin ? 'true' : 'false'; ?> || <?php echo $is_editor ? 'true' : 'false'; ?>) {
+            html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px;" onclick="newEditTask(' + task.id + ')">✏️ Düzenle</button>';
+            console.log('✅ Added edit button for admin/editor user');
         } else {
-            // SIMPLIFIED HISTORY AND EDIT BUTTONS - Show for admins/editors only (not for participant users)
-            <?php if ($is_editor || $is_admin || (defined('WP_DEBUG') && WP_DEBUG)): ?>
-            html += '<button class="bkm-btn bkm-btn-small" style="background: #ffc107; color: #212529; margin-right: 8px;" onclick="newShowTaskHistory(' + task.id + ')">📋 Geçmiş</button>';
-            // Only allow edit for admin/editor users, not participant users
-            if (<?php echo $is_admin ? 'true' : 'false'; ?> || <?php echo $is_editor ? 'true' : 'false'; ?>) {
-                html += '<button class="bkm-btn bkm-btn-small" style="background: #6c757d; color: white; margin-right: 8px;" onclick="newEditTask(' + task.id + ')">✏️ Düzenle</button>';
-                console.log('✅ Added edit button for admin/editor user');
-            } else {
-                console.log('ℹ️ Edit button not added - participant users cannot edit tasks');
-            }
-            console.log('✅ Added history button for privileged user or debug mode');
-            <?php else: ?>
-            console.log('ℹ️ History and edit buttons not added - insufficient permissions');
-            <?php endif; ?>
-            
-            // Complete button (only for approved tasks that are not completed)
-            if (!isCompleted && canPerformOperations) {
-                html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="markTaskComplete(' + task.id + ')">✓ Tamamla</button>';
-            } else if (isPending && !isCompleted) {
-                html += '<span class="bkm-status-info" style="color: #856404; font-size: 12px; font-style: italic;">⏳ Görev onaylandıktan sonra işlem yapabilirsiniz</span>';
-            }
+            console.log('ℹ️ Edit button not added - participant users cannot edit tasks');
+        }
+        console.log('✅ Added history button for privileged user or debug mode');
+        <?php else: ?>
+        console.log('ℹ️ History and edit buttons not added - insufficient permissions');
+        <?php endif; ?>
+        
+        // Complete button (only for approved tasks that are not completed)
+        if (!isCompleted && canPerformOperations) {
+            html += '<button class="bkm-btn bkm-btn-small bkm-btn-success" onclick="markTaskComplete(' + task.id + ')">✓ Tamamla</button>';
+        } else if (isPending && !isCompleted) {
+            html += '<span class="bkm-status-info" style="color: #856404; font-size: 12px; font-style: italic;">⏳ Görev onaylandıktan sonra işlem yapabilirsiniz</span>';
         }
         
         html += '</div>';
@@ -3056,7 +3091,7 @@ function showTaskHistory(taskId) {
 function displayTaskHistoryModal(history, taskId) {
     var modalHtml = `
         <div id="task-history-modal" class="bkm-modal-overlay" onclick="closeTaskHistoryModal(event)">
-            <div class="bkm-modal-content" onclick="event.stopPropagation()" style="width: 85%; max-width: 1200px;">
+            <div class="bkm-modal-content" onclick="event.stopPropagation()" style="width: 95%; max-width: 1600px; min-height: 400px;">
                 <div class="bkm-modal-header">
                     <h3>📋 Görev Geçmişi (ID: ${taskId})</h3>
                     <button type="button" class="bkm-modal-close" onclick="closeTaskHistoryModal()">&times;</button>
@@ -3855,7 +3890,7 @@ function showTaskHistoryModal(taskId, history) {
     modal.className = 'bkm-modal';
     modal.innerHTML = `
         <div class="bkm-modal-backdrop">
-            <div class="bkm-modal-content" style="max-width: 1400px; width: 95%;">
+            <div class="bkm-modal-content" style="max-width: 1600px; width: 95%; min-height: 400px; background: white; border-radius: 8px; border: 1px solid #ddd;">
                 <div class="bkm-modal-header">
                     <h3>📋 Görev Geçmişi (ID: ${taskId})</h3>
                     <button class="bkm-modal-close" onclick="closeBkmModal()">&times;</button>
