@@ -106,7 +106,7 @@ function display_notes($notes, $parent_id = null, $level = 0, $is_admin_param = 
 }
 
 // Handle task actions
-if (isset($_POST['task_action']) && wp_verify_nonce($_POST['bkm_frontend_nonce'], 'bkm_frontend_action')) {
+if (isset($_POST['task_action']) && (wp_verify_nonce($_POST['bkm_frontend_nonce_' . $_POST['task_id']] ?? '', 'bkm_frontend_action') || wp_verify_nonce($_POST['bkm_frontend_nonce_reject_' . $_POST['task_id']] ?? '', 'bkm_frontend_action'))) {
     if ($_POST['task_action'] === 'complete_task') {
         $task_id = intval($_POST['task_id']);
         
@@ -122,10 +122,11 @@ if (isset($_POST['task_action']) && wp_verify_nonce($_POST['bkm_frontend_nonce']
                 array(
                     'tamamlandi' => 1,
                     'ilerleme_durumu' => 100,
+                    'status' => 'completed',
                     'gercek_bitis_tarihi' => current_time('mysql')
                 ),
                 array('id' => $task_id),
-                array('%d', '%d', '%s'),
+                array('%d', '%d', '%s', '%s'),
                 array('%d')
             );
             
@@ -140,11 +141,51 @@ if (isset($_POST['task_action']) && wp_verify_nonce($_POST['bkm_frontend_nonce']
             $plugin->send_email_notification('task_completed', $notification_data);
             
             // Update action progress based on tasks average
-            $plugin->update_action_progress($task->action_id);
+            $plugin->update_action_progress_from_tasks($task_id);
             
             // Redirect to prevent form resubmission
             global $wp;
             wp_safe_redirect(home_url(add_query_arg(array('success' => 'task_completed'), $wp->request)));
+            exit;
+        }
+    } elseif ($_POST['task_action'] === 'reject_task') {
+        $task_id = intval($_POST['task_id']);
+        
+        // Check if user owns this task
+        $task = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $tasks_table WHERE id = %d AND sorumlu_id = %d",
+            $task_id, $current_user->ID
+        ));
+        
+        if ($task) {
+            $wpdb->update(
+                $tasks_table,
+                array(
+                    'status' => 'rejected',
+                    'ilerleme_durumu' => 0
+                ),
+                array('id' => $task_id),
+                array('%s', '%d'),
+                array('%d')
+            );
+            
+            // Send email notification
+            $plugin = BKM_Aksiyon_Takip::get_instance();
+            $notification_data = array(
+                'content' => $task->content,
+                'sorumlu' => $current_user->display_name,
+                'task_id' => $task_id,
+                'action_id' => $task->action_id
+            );
+            
+            $plugin->send_email_notification('task_rejected', $notification_data);
+            
+            // Update action progress based on tasks average
+            $plugin->update_action_progress_from_tasks($task_id);
+            
+            // Redirect to prevent form resubmission
+            global $wp;
+            wp_safe_redirect(home_url(add_query_arg(array('success' => 'task_rejected'), $wp->request)));
             exit;
         }
     }
@@ -220,6 +261,8 @@ if (isset($_POST['note_action']) && wp_verify_nonce($_POST['bkm_frontend_nonce']
 if (isset($_GET['success'])) {
     if ($_GET['success'] === 'task_completed') {
         echo '<div class="bkm-success">Görev başarıyla tamamlandı!</div>';
+    } elseif ($_GET['success'] === 'task_rejected') {
+        echo '<div class="bkm-success">Görev başarıyla reddedildi!</div>';
     } elseif ($_GET['success'] === 'task_added') {
         echo '<div class="bkm-success">Görev başarıyla eklendi!</div>';
     } elseif ($_GET['success'] === 'note_added') {
@@ -317,6 +360,13 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
 .bkm-btn-success { 
     background: #28a745 !important; 
     color: #fff !important; 
+}
+.bkm-btn-danger { 
+    background: #dc3545 !important; 
+    color: #fff !important; 
+}
+.bkm-btn-danger:hover {
+    background: #c82333 !important;
 }
 .bkm-btn-warning { 
     background: #ffc107 !important; 
@@ -424,6 +474,33 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
 }
 .bkm-task-item.completed .bkm-progress-bar {
     background: #28a745 !important;
+}
+.bkm-task-item.rejected {
+    background: #fff5f5 !important;
+    border-left: 4px solid #dc3545 !important;
+    opacity: 0.8 !important;
+}
+.bkm-task-item.rejected .bkm-task-content p {
+    color: #721c24 !important;
+    font-style: italic !important;
+}
+.bkm-task-item.rejected .bkm-progress-bar {
+    background: #dc3545 !important;
+}
+.bkm-task-item.rejected::before {
+    content: "❌ REDDEDILDI";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #dc3545;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+}
+.bkm-task-item {
+    position: relative;
 }
 .action-completed {
     background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
@@ -1560,7 +1637,20 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                                         ));
                                                         $has_notes = !empty($task_notes);
                                                         ?>
-                                                        <div class="bkm-task-item <?php echo $task->tamamlandi ? 'completed' : ''; ?>" data-task-id="<?php echo $task->id; ?>">
+                                                        <?php
+                                                        // Determine task status class and whether task is actionable
+                                                        $task_status_class = '';
+                                                        $is_task_actionable = true;
+                                                        
+                                                        if ($task->tamamlandi || $task->status === 'completed') {
+                                                            $task_status_class = 'completed';
+                                                            $is_task_actionable = false;
+                                                        } elseif ($task->status === 'rejected') {
+                                                            $task_status_class = 'rejected';
+                                                            $is_task_actionable = false;
+                                                        }
+                                                        ?>
+                                                        <div class="bkm-task-item <?php echo $task_status_class; ?>" data-task-id="<?php echo $task->id; ?>" data-task-status="<?php echo esc_attr($task->status); ?>">
                                                             <div class="bkm-task-content">
                                                                 <p><strong><?php echo esc_html($task->content); ?></strong></p>
                                                                 <div class="bkm-task-meta">
@@ -1580,25 +1670,35 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                                             </div>
                                                             
                                                             <div class="bkm-task-actions">
-                                                                <?php if ($task->sorumlu_id == $current_user->ID && !$task->tamamlandi): ?>
+                                                                <?php if ($task->sorumlu_id == $current_user->ID && $is_task_actionable): ?>
                                                                     <form method="post" style="display: inline;">
                                                                         <?php wp_nonce_field('bkm_frontend_action', 'bkm_frontend_nonce_' . $task->id); ?>
                                                                         <input type="hidden" name="task_action" value="complete_task" />
                                                                         <input type="hidden" name="task_id" value="<?php echo $task->id; ?>" />
                                                                         <button type="submit" class="bkm-btn bkm-btn-success bkm-btn-small"
                                                                                 onclick="return confirm('Bu görevi tamamladınız mı?')">
-                                                                            Tamamla
+                                                                            ✅ Tamamla
+                                                                        </button>
+                                                                    </form>
+                                                                    
+                                                                    <form method="post" style="display: inline; margin-left: 5px;">
+                                                                        <?php wp_nonce_field('bkm_frontend_action', 'bkm_frontend_nonce_reject_' . $task->id); ?>
+                                                                        <input type="hidden" name="task_action" value="reject_task" />
+                                                                        <input type="hidden" name="task_id" value="<?php echo $task->id; ?>" />
+                                                                        <button type="submit" class="bkm-btn bkm-btn-danger bkm-btn-small"
+                                                                                onclick="return confirm('Bu görevi reddetmek istediğinizden emin misiniz?')">
+                                                                            ❌ Reddet
                                                                         </button>
                                                                     </form>
                                                                 <?php endif; ?>
                                                                 
-                                                                <?php if ($task->sorumlu_id == $current_user->ID || $is_admin || $is_editor): ?>
+                                                                <?php if (($task->sorumlu_id == $current_user->ID && $is_task_actionable) || $is_admin || $is_editor): ?>
                                                                     <button class="bkm-btn bkm-btn-small" onclick="toggleNoteForm(<?php echo $task->id; ?>)">
-                                                                        Not Ekle
+                                                                        📝 Not Ekle
                                                                     </button>
                                                                     <?php if ($has_notes): ?>
                                                                         <button class="bkm-btn bkm-btn-small" onclick="toggleNotes(<?php echo $task->id; ?>)">
-                                                                            Notları Göster (<?php echo count($task_notes); ?>)
+                                                                            💬 Notları Göster (<?php echo count($task_notes); ?>)
                                                                         </button>
                                                                     <?php endif; ?>
                                                                 <?php endif; ?>
@@ -1606,7 +1706,7 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                                         </div>
                                                         
                                                         <!-- Note Form (hidden by default) -->
-                                                        <?php if ($task->sorumlu_id == $current_user->ID || $is_admin || $is_editor): ?>
+                                                        <?php if (($task->sorumlu_id == $current_user->ID && $is_task_actionable) || $is_admin || $is_editor): ?>
                                                             <div id="note-form-<?php echo $task->id; ?>" class="bkm-note-form" style="display: none;">
                                                                 <form>
                                                                     <input type="hidden" name="task_id" value="<?php echo $task->id; ?>" />
@@ -1615,6 +1715,7 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                                                             <label for="note_content_<?php echo $task->id; ?>">Not İçeriği:</label>
                                                                             <textarea name="note_content" id="note_content_<?php echo $task->id; ?>" rows="3" placeholder="Notunuzu buraya yazın..." required></textarea>
                                                                         </div>
+                                                                        <?php if ($is_task_actionable): ?>
                                                                         <div class="bkm-note-progress">
                                                                             <label for="note_progress_<?php echo $task->id; ?>">İlerleme Durumu (%):</label>
                                                                             <input type="number" name="note_progress" id="note_progress_<?php echo $task->id; ?>" 
@@ -1622,10 +1723,11 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                                                                    placeholder="0-100" />
                                                                             <small>Mevcut: <?php echo $task->ilerleme_durumu; ?>%</small>
                                                                         </div>
+                                                                        <?php endif; ?>
                                                                     </div>
                                                                     <div class="bkm-form-actions">
                                                                         <button type="submit" class="bkm-btn bkm-btn-primary bkm-btn-small">
-                                                                            Not Ekle ve İlerlemeyi Güncelle
+                                                                            <?php echo $is_task_actionable ? 'Not Ekle ve İlerlemeyi Güncelle' : 'Not Ekle'; ?>
                                                                         </button>
                                                                         <button type="button" class="bkm-btn bkm-btn-secondary bkm-btn-small" onclick="toggleNoteForm(<?php echo $task->id; ?>)">
                                                                             İptal
