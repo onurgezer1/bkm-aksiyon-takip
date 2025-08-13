@@ -1461,7 +1461,8 @@ public function send_email_notification($type, $data) {
         }
         case 'task_created':
         case 'task_updated':
-        case 'task_completed': {
+        case 'task_completed':
+        case 'task_rejected': {
             $task = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}bkm_tasks WHERE id = %d", $data['task_id'] ?? 0));
             $action = $task ? $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}bkm_actions WHERE id = %d", $task->action_id)) : null;
             $kategori = $action ? $wpdb->get_var($wpdb->prepare("SELECT name FROM {$wpdb->prefix}bkm_categories WHERE id = %d", $action->kategori_id)) : '';
@@ -1478,7 +1479,12 @@ public function send_email_notification($type, $data) {
                 .'<tr><td style="padding:8px 0;font-weight:bold;">Aksiyon:</td><td style="padding:8px 0;">' . ($action ? esc_html($action->tespit_konusu) : '-') . '</td></tr>'
                 .'<tr><td style="padding:8px 0;font-weight:bold;">Kategori:</td><td style="padding:8px 0;">' . esc_html($kategori) . '</td></tr>'
                 .'</table>';
-            $subject = sprintf('[%s] Görev: %s', $site_name, $type === 'task_created' ? 'Oluşturuldu' : ($type === 'task_updated' ? 'Güncellendi' : 'Tamamlandı'));
+            
+            if ($type === 'task_rejected') {
+                $subject = sprintf('[%s] Görev: Reddedildi', $site_name);
+            } else {
+                $subject = sprintf('[%s] Görev: %s', $site_name, $type === 'task_created' ? 'Oluşturuldu' : ($type === 'task_updated' ? 'Güncellendi' : 'Tamamlandı'));
+            }
             break;
         }
         case 'note_added':
@@ -2155,7 +2161,7 @@ public function ajax_update_task_progress() {
 /**
  * Update action progress based on its tasks' progress
  */
-private function update_action_progress_from_tasks($task_id) {
+public function update_action_progress_from_tasks($task_id) {
     global $wpdb;
     
     // Get the action_id from task
