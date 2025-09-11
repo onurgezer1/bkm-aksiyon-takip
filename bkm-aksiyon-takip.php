@@ -1,16 +1,23 @@
 <?php
 /**
- * Plugin Name: BKM AKSİYON TAKİP
+ * Plugin Name: BKM Aksiyon Takip (Action Tracking System)
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
- * Description: WordPress eklentisi ile aksiyon ve görev takip sistemi
+ * Description: Professional action and task tracking system for WordPress. Manage team actions, track progress, set deadlines, and improve productivity.
  * Version: 1.0.4
  * Author: Anadolu Birlik
+ * Author URI: https://github.com/anadolubirlik
  * Text Domain: bkm-aksiyon-takip
  * Domain Path: /languages
  * Requires at least: 5.0
  * Tested up to: 6.4
+ * Requires PHP: 7.4
+ * Network: false
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * 
+ * @package BKM_Aksiyon_Takip
+ * @version 1.0.4
+ * @author Anadolu Birlik
  */
 
 // Prevent direct access
