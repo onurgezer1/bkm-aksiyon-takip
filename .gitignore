@@ -1,0 +1,38 @@
+# WordPress Plugin .gitignore
+
+# Temporary files
+/tmp/
+*.tmp
+*.temp
+
+# Build artifacts
+/build/
+/dist/
+/node_modules/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Package files
+*.zip
+*.tar
+*.tar.gz
+
+# Environment files
+.env
+.env.local
+
+# Screenshots (will be added separately for Envato)
+# screenshot-*.png
+# banner-*.jpg
+# icon-*.png
