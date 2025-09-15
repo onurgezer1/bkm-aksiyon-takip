@@ -3,7 +3,7 @@
  * Plugin Name: BKM Aksiyon Takip (Action Tracking System)
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
  * Description: Professional action and task tracking system for WordPress. Manage team actions, track progress, set deadlines, and improve productivity.
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: Anadolu Birlik
  * Author URI: https://github.com/anadolubirlik
  * Text Domain: bkm-aksiyon-takip
@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BKM_AKSIYON_TAKIP_VERSION', '1.0.4');
+define('BKM_AKSIYON_TAKIP_VERSION', '1.0.5');
 define('BKM_AKSIYON_TAKIP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);
@@ -586,6 +586,33 @@ private function create_database_tables() {
                 WHERE u.ID IS NULL 
                 LIMIT 1000
             ");
+            
+            // Fix notes with "Bilinmeyen" or empty user names
+            $user_name_column_exists = $wpdb->get_var("SHOW COLUMNS FROM $notes_table LIKE 'user_name'");
+            if ($user_name_column_exists) {
+                $fixed_usernames = $wpdb->query("
+                    UPDATE $notes_table n 
+                    INNER JOIN $users_table u ON n.user_id = u.ID 
+                    LEFT JOIN {$wpdb->usermeta} fn ON u.ID = fn.user_id AND fn.meta_key = 'first_name'
+                    LEFT JOIN {$wpdb->usermeta} ln ON u.ID = ln.user_id AND ln.meta_key = 'last_name'
+                    SET n.user_name = CASE 
+                        WHEN TRIM(CONCAT(COALESCE(fn.meta_value, ''), ' ', COALESCE(ln.meta_value, ''))) != ''
+                        THEN TRIM(CONCAT(COALESCE(fn.meta_value, ''), ' ', COALESCE(ln.meta_value, '')))
+                        WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                        THEN u.display_name
+                        ELSE u.user_login
+                    END
+                    WHERE n.user_name IS NULL 
+                       OR n.user_name = '' 
+                       OR n.user_name = 'Bilinmeyen' 
+                       OR n.user_name = 'Bilinmeyen Kullanıcı'
+                    LIMIT 1000
+                ");
+                
+                if ($fixed_usernames > 0) {
+                    error_log("🔧 Fixed $fixed_usernames note records with proper user names");
+                }
+            }
             
             // Log cleanup results
             if ($orphan_task_notes > 0) {
