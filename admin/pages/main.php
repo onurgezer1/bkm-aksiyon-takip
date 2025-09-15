@@ -35,6 +35,11 @@ $recent_actions = $wpdb->get_results(
 <div class="wrap">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
     
+    <!-- Info notice about the note system fixes -->
+    <div class="notice notice-info is-dismissible">
+        <p><strong>BKM Aksiyon Takip:</strong> Not sistemi iyileştirildi! Artık görevlerde sadece ilgili notlar görünecek ve kullanıcı bilgileri doğru şekilde gösterilecek.</p>
+    </div>
+    
     <div class="bkm-dashboard">
         <div class="bkm-stats-grid">
             <div class="bkm-stat-card">
