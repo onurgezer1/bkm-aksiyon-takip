@@ -1639,11 +1639,11 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                                         $task_notes = $wpdb->get_results($wpdb->prepare(
                                                             "SELECT n.*, 
                                                                     CASE 
-                                                                        WHEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value)) != ''
-                                                                        THEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value))
+                                                                        WHEN TRIM(CONCAT(COALESCE(um1.meta_value, ''), ' ', COALESCE(um2.meta_value, ''))) != ''
+                                                                        THEN TRIM(CONCAT(COALESCE(um1.meta_value, ''), ' ', COALESCE(um2.meta_value, '')))
                                                                         WHEN u.display_name IS NOT NULL AND u.display_name != ''
                                                                         THEN u.display_name
-                                                                        ELSE COALESCE(u.user_login, 'Bilinmeyen')
+                                                                        ELSE COALESCE(u.user_login, 'Kullanıcı')
                                                                     END as user_name 
                                                              FROM $notes_table n 
                                                              LEFT JOIN {$wpdb->users} u ON n.user_id = u.ID 
