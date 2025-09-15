@@ -23,9 +23,19 @@ $completed_tasks = $wpdb->get_var("SELECT COUNT(*) FROM $tasks_table WHERE tamam
 
 // Get recent actions
 $recent_actions = $wpdb->get_results(
-    "SELECT a.*, u.display_name as tanımlayan_name, c.name as kategori_name 
+    "SELECT a.*, 
+            CASE 
+                WHEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value)) != ''
+                THEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value))
+                WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                THEN u.display_name
+                ELSE u.user_login
+            END as tanımlayan_name,
+            c.name as kategori_name 
      FROM $actions_table a 
      LEFT JOIN {$wpdb->users} u ON a.tanımlayan_id = u.ID 
+     LEFT JOIN {$wpdb->usermeta} um1 ON u.ID = um1.user_id AND um1.meta_key = 'first_name'
+     LEFT JOIN {$wpdb->usermeta} um2 ON u.ID = um2.user_id AND um2.meta_key = 'last_name'
      LEFT JOIN {$wpdb->prefix}bkm_categories c ON a.kategori_id = c.id 
      ORDER BY a.created_at DESC 
      LIMIT 10"
@@ -34,6 +44,13 @@ $recent_actions = $wpdb->get_results(
 
 <div class="wrap">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+    
+    <?php /* Temporarily disabled to prevent any potential issues
+    <!-- Info notice about the note system fixes -->
+    <div class="notice notice-info is-dismissible">
+        <p><strong>BKM Aksiyon Takip:</strong> Not sistemi iyileştirildi! Artık görevlerde sadece ilgili notlar görünecek ve kullanıcı bilgileri doğru şekilde gösterilecek.</p>
+    </div>
+    */ ?>
     
     <div class="bkm-dashboard">
         <div class="bkm-stats-grid">

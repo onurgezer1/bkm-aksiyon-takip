@@ -1,0 +1,55 @@
+# Copyright (C) 2025 BKM Aksiyon Takip
+# This file is distributed under the same license as the BKM Aksiyon Takip plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: BKM Aksiyon Takip 1.0.4\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/bkm-aksiyon-takip\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-01-01T00:00:00+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.8.1\n"
+"X-Domain: bkm-aksiyon-takip\n"
+
+#. Plugin Name of the plugin
+msgid "BKM AKSİYON TAKİP"
+msgstr ""
+
+#. Plugin URI of the plugin
+msgid "https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4"
+msgstr ""
+
+#. Description of the plugin
+msgid "WordPress eklentisi ile aksiyon ve görev takip sistemi"
+msgstr ""
+
+#. Author of the plugin
+msgid "Anadolu Birlik"
+msgstr ""
+
+msgid "BKM Aksiyon Takip"
+msgstr ""
+
+msgid "Aksiyon Takip"
+msgstr ""
+
+msgid "Aksiyonlar"
+msgstr ""
+
+msgid "Yeni Aksiyon Ekle"
+msgstr ""
+
+msgid "Kategoriler"
+msgstr ""
+
+msgid "Raporlar"
+msgstr ""
+
+msgid "Performans"
+msgstr ""
+
+msgid "Ayarlar"
+msgstr ""

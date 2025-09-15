@@ -129,3 +129,7 @@ For support and documentation, please visit our website or contact our support t
 == License ==
 
 This plugin is licensed under the GPLv2 or later license. You are free to modify and distribute this plugin according to the terms of the GNU General Public License.
+
+== Privacy Policy ==
+
+This plugin does not collect any personal data from users. All action tracking data is stored locally in your WordPress database and is not transmitted to any external services.

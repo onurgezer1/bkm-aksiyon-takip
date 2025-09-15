@@ -1,16 +1,23 @@
 <?php
 /**
- * Plugin Name: BKM AKSİYON TAKİP
+ * Plugin Name: BKM Aksiyon Takip (Action Tracking System)
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
- * Description: WordPress eklentisi ile aksiyon ve görev takip sistemi
- * Version: 1.0.4
+ * Description: Professional action and task tracking system for WordPress. Manage team actions, track progress, set deadlines, and improve productivity.
+ * Version: 1.0.8
  * Author: Anadolu Birlik
+ * Author URI: https://github.com/anadolubirlik
  * Text Domain: bkm-aksiyon-takip
  * Domain Path: /languages
  * Requires at least: 5.0
  * Tested up to: 6.4
+ * Requires PHP: 7.4
+ * Network: false
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * 
+ * @package BKM_Aksiyon_Takip
+ * @version 1.0.4
+ * @author Anadolu Birlik
  */
 
 // Prevent direct access
@@ -19,7 +26,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BKM_AKSIYON_TAKIP_VERSION', '1.0.4');
+define('BKM_AKSIYON_TAKIP_VERSION', '1.0.8');
 define('BKM_AKSIYON_TAKIP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);
@@ -111,6 +118,9 @@ class BKM_Aksiyon_Takip {
         add_action('wp_ajax_nopriv_bkm_get_tasks', array($this, 'ajax_get_tasks'));
         add_action('wp_ajax_bkm_get_task_notes', array($this, 'ajax_get_task_notes'));
         add_action('wp_ajax_nopriv_bkm_get_task_notes', array($this, 'ajax_get_task_notes'));
+        
+        // Admin-only cleanup endpoint
+        add_action('wp_ajax_bkm_cleanup_notes', array($this, 'ajax_cleanup_notes'));
         
         // Category AJAX handlers
         add_action('wp_ajax_bkm_add_category', array($this, 'ajax_add_category'));
@@ -213,11 +223,17 @@ class BKM_Aksiyon_Takip {
      * Plugin initialization
      */
     public function init() {
-        // Check and create missing database tables
-        $this->check_and_create_tables();
-        
-        // Load text domain for translations
-        load_plugin_textdomain('bkm-aksiyon-takip', false, dirname(plugin_basename(__FILE__)) . '/languages');
+        try {
+            // Check and create missing database tables
+            $this->check_and_create_tables();
+            
+            // Load text domain for translations
+            load_plugin_textdomain('bkm-aksiyon-takip', false, dirname(plugin_basename(__FILE__)) . '/languages');
+            
+        } catch (Exception $e) {
+            error_log("❌ BKM Plugin initialization error: " . $e->getMessage());
+            // Continue with non-critical initialization
+        }
         
         // Handle custom login form submission
         if (isset($_POST['bkm_login_submit']) && isset($_POST['bkm_nonce']) && wp_verify_nonce($_POST['bkm_nonce'], 'bkm_login_nonce')) {
@@ -518,98 +534,190 @@ private function create_database_tables() {
      * Check and create missing tables
      */
     public function check_and_create_tables() {
+        try {
+            global $wpdb;
+            
+            // First create tables if they don't exist
+            $this->create_database_tables();
+            
+            // Then check for missing columns and add them
+            $this->upgrade_database_structure();
+            
+        } catch (Exception $e) {
+            error_log("❌ Error during table check/creation: " . $e->getMessage());
+            // Don't throw the error to prevent site crashes
+        }
+    }
+    
+    /**
+     * Clean up orphan notes and fix data inconsistencies
+     */
+    private function cleanup_orphan_notes() {
         global $wpdb;
         
-        // First create tables if they don't exist
-        $this->create_database_tables();
-        
-        // Then check for missing columns and add them
-        $this->upgrade_database_structure();
+        // Add error handling and safety checks
+        try {
+            $notes_table = $wpdb->prefix . 'bkm_task_notes';
+            $tasks_table = $wpdb->prefix . 'bkm_tasks';
+            $users_table = $wpdb->prefix . 'users';
+            
+            // Verify tables exist before cleanup
+            $tables_exist = $wpdb->get_var("SHOW TABLES LIKE '$notes_table'") && 
+                           $wpdb->get_var("SHOW TABLES LIKE '$tasks_table'") && 
+                           $wpdb->get_var("SHOW TABLES LIKE '$users_table'");
+            
+            if (!$tables_exist) {
+                error_log("⚠️ Skipping cleanup: Required tables do not exist");
+                return;
+            }
+            
+            // Delete notes that reference non-existent tasks (with limit for safety)
+            $orphan_task_notes = $wpdb->query("
+                DELETE n FROM $notes_table n 
+                LEFT JOIN $tasks_table t ON n.task_id = t.id 
+                WHERE t.id IS NULL 
+                LIMIT 1000
+            ");
+            
+            // Delete notes that reference non-existent users (with limit for safety)
+            $orphan_user_notes = $wpdb->query("
+                DELETE n FROM $notes_table n 
+                LEFT JOIN $users_table u ON n.user_id = u.ID 
+                WHERE u.ID IS NULL 
+                LIMIT 1000
+            ");
+            
+            // Fix notes with "Bilinmeyen" or empty user names
+            $user_name_column_exists = $wpdb->get_var("SHOW COLUMNS FROM $notes_table LIKE 'user_name'");
+            if ($user_name_column_exists) {
+                $fixed_usernames = $wpdb->query("
+                    UPDATE $notes_table n 
+                    INNER JOIN $users_table u ON n.user_id = u.ID 
+                    LEFT JOIN {$wpdb->usermeta} fn ON u.ID = fn.user_id AND fn.meta_key = 'first_name'
+                    LEFT JOIN {$wpdb->usermeta} ln ON u.ID = ln.user_id AND ln.meta_key = 'last_name'
+                    SET n.user_name = CASE 
+                        WHEN TRIM(CONCAT(COALESCE(fn.meta_value, ''), ' ', COALESCE(ln.meta_value, ''))) != ''
+                        THEN TRIM(CONCAT(COALESCE(fn.meta_value, ''), ' ', COALESCE(ln.meta_value, '')))
+                        WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                        THEN u.display_name
+                        ELSE u.user_login
+                    END
+                    WHERE n.user_name IS NULL 
+                       OR n.user_name = '' 
+                       OR n.user_name = 'Bilinmeyen' 
+                       OR n.user_name = 'Bilinmeyen Kullanıcı'
+                    LIMIT 1000
+                ");
+                
+                if ($fixed_usernames > 0) {
+                    error_log("🔧 Fixed $fixed_usernames note records with proper user names");
+                }
+            }
+            
+            // Log cleanup results
+            if ($orphan_task_notes > 0) {
+                error_log("🧹 Cleaned up $orphan_task_notes orphan notes with invalid task references");
+            }
+            if ($orphan_user_notes > 0) {
+                error_log("🧹 Cleaned up $orphan_user_notes orphan notes with invalid user references");
+            }
+            
+            // Fix notes with empty or invalid content (with limit for safety)
+            $empty_notes = $wpdb->query("
+                DELETE FROM $notes_table 
+                WHERE (content IS NULL OR TRIM(content) = '') 
+                LIMIT 1000
+            ");
+            
+            if ($empty_notes > 0) {
+                error_log("🧹 Cleaned up $empty_notes empty notes");
+            }
+            
+        } catch (Exception $e) {
+            error_log("❌ Error during notes cleanup: " . $e->getMessage());
+        }
     }
     
     /**
      * Upgrade database structure for existing installations
      */
     private function upgrade_database_structure() {
-        global $wpdb;
-        
-        // Check and add progress column to bkm_task_notes table
-        $notes_table = $wpdb->prefix . 'bkm_task_notes';
-        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $notes_table LIKE 'progress'");
-        
-        if (empty($column_exists)) {
-            $wpdb->query("ALTER TABLE $notes_table ADD COLUMN progress int(3) DEFAULT NULL AFTER parent_note_id");
-            error_log("✅ Added progress column to $notes_table table");
-        }
-        
-        // Check and add user_name column to bkm_task_notes table for easier querying
-        $user_name_exists = $wpdb->get_results("SHOW COLUMNS FROM $notes_table LIKE 'user_name'");
-        
-        if (empty($user_name_exists)) {
-            $wpdb->query("ALTER TABLE $notes_table ADD COLUMN user_name varchar(255) DEFAULT NULL AFTER user_id");
+        try {
+            global $wpdb;
             
-            // Populate existing records with user names (first_name + last_name)
-            $users = $wpdb->get_results("
-                SELECT u.ID, 
-                       COALESCE(
-                           CONCAT(
-                               TRIM(COALESCE(fn.meta_value, '')), 
-                               ' ', 
-                               TRIM(COALESCE(ln.meta_value, ''))
-                           ), 
-                           u.display_name, 
-                           'Bilinmeyen Kullanıcı'
-                       ) as full_name
-                FROM {$wpdb->users} u 
-                INNER JOIN $notes_table n ON u.ID = n.user_id 
-                LEFT JOIN {$wpdb->usermeta} fn ON u.ID = fn.user_id AND fn.meta_key = 'first_name'
-                LEFT JOIN {$wpdb->usermeta} ln ON u.ID = ln.user_id AND ln.meta_key = 'last_name'
-                WHERE n.user_name IS NULL
-            ");
-            
-            foreach ($users as $user) {
-                $wpdb->update(
-                    $notes_table,
-                    array('user_name' => $user->full_name),
-                    array('user_id' => $user->ID),
-                    array('%s'),
-                    array('%d')
-                );
+            // Only run cleanup once per plugin version to avoid performance issues
+            $cleanup_version = get_option('bkm_cleanup_notes_version', '0.0.0');
+            if (version_compare($cleanup_version, BKM_AKSIYON_TAKIP_VERSION, '<')) {
+                // Clean up orphan notes first (notes without valid tasks or users)
+                $this->cleanup_orphan_notes();
+                update_option('bkm_cleanup_notes_version', BKM_AKSIYON_TAKIP_VERSION);
             }
             
-            error_log("✅ Added user_name column to $notes_table table and populated existing records with first_name + last_name");
-        } else {
-            // Check if there are any notes with empty user_name and populate them with first_name + last_name
-            $empty_user_names = $wpdb->get_results("
-                SELECT DISTINCT n.user_id, 
-                       COALESCE(
-                           CONCAT(
-                               TRIM(COALESCE(fn.meta_value, '')), 
-                               ' ', 
-                               TRIM(COALESCE(ln.meta_value, ''))
-                           ), 
-                           u.display_name, 
-                           'Bilinmeyen Kullanıcı'
-                       ) as full_name
-                FROM $notes_table n 
-                LEFT JOIN {$wpdb->users} u ON n.user_id = u.ID 
-                LEFT JOIN {$wpdb->usermeta} fn ON u.ID = fn.user_id AND fn.meta_key = 'first_name'
-                LEFT JOIN {$wpdb->usermeta} ln ON u.ID = ln.user_id AND ln.meta_key = 'last_name'
-                WHERE (n.user_name IS NULL OR n.user_name = '') AND u.ID IS NOT NULL
-            ");
+            // Check and add progress column to bkm_task_notes table
+            $notes_table = $wpdb->prefix . 'bkm_task_notes';
             
-            if (!empty($empty_user_names)) {
-                foreach ($empty_user_names as $user) {
-                    $wpdb->update(
-                        $notes_table,
-                        array('user_name' => $user->full_name),
-                        array('user_id' => $user->user_id),
-                        array('%s'),
-                        array('%d')
-                    );
+            // Verify table exists before attempting any changes
+            if (!$wpdb->get_var("SHOW TABLES LIKE '$notes_table'")) {
+                error_log("⚠️ Notes table does not exist, skipping structure upgrade");
+                return;
+            }
+            
+            // Only run structure upgrades once per version
+            $structure_version = get_option('bkm_structure_upgrade_version', '0.0.0');
+            if (version_compare($structure_version, BKM_AKSIYON_TAKIP_VERSION, '<')) {
+                
+                $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $notes_table LIKE 'progress'");
+                
+                if (empty($column_exists)) {
+                    $wpdb->query("ALTER TABLE $notes_table ADD COLUMN progress int(3) DEFAULT NULL AFTER parent_note_id");
+                    error_log("✅ Added progress column to $notes_table table");
                 }
-                error_log("✅ Updated " . count($empty_user_names) . " empty user_name records in $notes_table table with first_name + last_name");
+                
+                // Check and add user_name column to bkm_task_notes table for easier querying
+                $user_name_exists = $wpdb->get_results("SHOW COLUMNS FROM $notes_table LIKE 'user_name'");
+                
+                if (empty($user_name_exists)) {
+                    $wpdb->query("ALTER TABLE $notes_table ADD COLUMN user_name varchar(255) DEFAULT NULL AFTER user_id");
+                    
+                    // Populate existing records with user names (first_name + last_name) - limit to prevent timeouts
+                    $users = $wpdb->get_results("
+                        SELECT DISTINCT u.ID, 
+                               CASE 
+                                   WHEN TRIM(COALESCE(CONCAT(TRIM(COALESCE(fn.meta_value, '')), ' ', TRIM(COALESCE(ln.meta_value, ''))), '')) != ''
+                                   THEN TRIM(CONCAT(TRIM(COALESCE(fn.meta_value, '')), ' ', TRIM(COALESCE(ln.meta_value, ''))))
+                                   WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                                   THEN u.display_name
+                                   WHEN u.user_login IS NOT NULL AND u.user_login != ''
+                                   THEN u.user_login
+                                   ELSE CONCAT('Kullanıcı #', u.ID)
+                               END as full_name
+                        FROM {$wpdb->users} u 
+                        INNER JOIN $notes_table n ON u.ID = n.user_id 
+                        LEFT JOIN {$wpdb->usermeta} fn ON u.ID = fn.user_id AND fn.meta_key = 'first_name'
+                        LEFT JOIN {$wpdb->usermeta} ln ON u.ID = ln.user_id AND ln.meta_key = 'last_name'
+                        WHERE n.user_name IS NULL OR n.user_name = '' OR n.user_name = 'Bilinmeyen Kullanıcı'
+                        LIMIT 1000
+                    ");
+                    
+                    foreach ($users as $user) {
+                        $wpdb->update(
+                            $notes_table,
+                            array('user_name' => $user->full_name),
+                            array('user_id' => $user->ID),
+                            array('%s'),
+                            array('%d')
+                        );
+                    }
+                    
+                    error_log("✅ Added user_name column to $notes_table table and populated existing records with first_name + last_name");
+                }
+                
+                // Update structure version to prevent re-running
+                update_option('bkm_structure_upgrade_version', BKM_AKSIYON_TAKIP_VERSION);
             }
+            
+        } catch (Exception $e) {
+            error_log("❌ Error during database structure upgrade: " . $e->getMessage());
         }
     }
 
@@ -2475,6 +2583,18 @@ public function ajax_get_notes() {
         wp_send_json_error('Geçersiz görev ID: ' . $task_id);
     }
     
+    // Verify that the task exists and current user has access to it
+    $tasks_table = $wpdb->prefix . 'bkm_tasks';
+    $task_exists = $wpdb->get_var($wpdb->prepare("
+        SELECT COUNT(*) FROM $tasks_table 
+        WHERE id = %d
+    ", $task_id));
+    
+    if (!$task_exists) {
+        error_log('❌ Task does not exist in ajax_get_notes: ' . $task_id);
+        wp_send_json_error('Belirtilen görev bulunamadı.');
+    }
+    
     $notes_table = $wpdb->prefix . 'bkm_task_notes';
     
     error_log("🗃️ Notlar için tablo: $notes_table, görev ID: $task_id");
@@ -2482,15 +2602,15 @@ public function ajax_get_notes() {
     // Get all notes for this task (both main notes and replies)
     $notes = $wpdb->get_results($wpdb->prepare("
         SELECT n.*, 
-               COALESCE(
-                   CONCAT(
-                       TRIM(COALESCE(fn.meta_value, '')), 
-                       ' ', 
-                       TRIM(COALESCE(ln.meta_value, ''))
-                   ), 
-                   u.display_name, 
-                   'Bilinmeyen Kullanıcı'
-               ) as user_name,
+               CASE 
+                   WHEN TRIM(COALESCE(CONCAT(TRIM(COALESCE(fn.meta_value, '')), ' ', TRIM(COALESCE(ln.meta_value, ''))), '')) != ''
+                   THEN TRIM(CONCAT(TRIM(COALESCE(fn.meta_value, '')), ' ', TRIM(COALESCE(ln.meta_value, ''))))
+                   WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                   THEN u.display_name
+                   WHEN u.user_login IS NOT NULL AND u.user_login != ''
+                   THEN u.user_login
+                   ELSE CONCAT('Kullanıcı #', n.user_id)
+               END as user_name,
                u.user_login,
                u.user_email,
                fn.meta_value as first_name,
@@ -2995,7 +3115,36 @@ public function ajax_fix_action_statuses() {
     ));
 }
 
+/**
+ * AJAX handler for cleaning up orphan notes (admin only)
+ */
+public function ajax_cleanup_notes() {
+    // Check if user is admin
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Bu işlem için yetkiniz bulunmamaktadır.');
+    }
+    
+    // Verify nonce for security
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_admin_nonce')) {
+        wp_send_json_error('Güvenlik kontrolü başarısız oldu.');
+    }
+    
+    // Run cleanup
+    $this->cleanup_orphan_notes();
+    
+    global $wpdb;
+    $notes_table = $wpdb->prefix . 'bkm_task_notes';
+    
+    // Get current count of notes
+    $notes_count = $wpdb->get_var("SELECT COUNT(*) FROM $notes_table");
+    
+    wp_send_json_success([
+        'message' => 'Not temizliği başarıyla tamamlandı.',
+        'remaining_notes' => $notes_count
+    ]);
 }
+
+} // End of BKM_Aksiyon_Takip class
 
 // Initialize plugin
 BKM_Aksiyon_Takip::get_instance();
@@ -3027,3 +3176,5 @@ function bkm_get_users_callback() {
     wp_send_json_success(['users' => $user_data]);
     wp_die();
 }
+
+// End of file

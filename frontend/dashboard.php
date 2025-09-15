@@ -47,11 +47,19 @@ error_log("Is admin (global): " . ($is_admin ? 'true' : 'false') . ", User roles
 if ($is_admin || $is_editor) {
     // Admins and editors see all actions
     $actions_query = "SELECT a.*, 
-                            COALESCE(u.display_name, 'Bilinmiyor') as tanımlayan_name,
+                            CASE 
+                                WHEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value)) != ''
+                                THEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value))
+                                WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                                THEN u.display_name
+                                ELSE COALESCE(u.user_login, 'Bilinmiyor')
+                            END as tanımlayan_name,
                             c.name as kategori_name,
                             p.name as performans_name
                      FROM $actions_table a
                      LEFT JOIN {$wpdb->users} u ON a.tanımlayan_id = u.ID AND a.tanımlayan_id > 0
+                     LEFT JOIN {$wpdb->usermeta} um1 ON u.ID = um1.user_id AND um1.meta_key = 'first_name'
+                     LEFT JOIN {$wpdb->usermeta} um2 ON u.ID = um2.user_id AND um2.meta_key = 'last_name'
                      LEFT JOIN $categories_table c ON a.kategori_id = c.id
                      LEFT JOIN $performance_table p ON a.performans_id = p.id
                      ORDER BY a.created_at DESC";
@@ -59,11 +67,19 @@ if ($is_admin || $is_editor) {
     // Non-admins and non-editors see only their assigned actions
     $actions_query = $wpdb->prepare(
         "SELECT a.*, 
-                COALESCE(u.display_name, 'Bilinmiyor') as tanımlayan_name,
+                CASE 
+                    WHEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value)) != ''
+                    THEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value))
+                    WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                    THEN u.display_name
+                    ELSE COALESCE(u.user_login, 'Bilinmiyor')
+                END as tanımlayan_name,
                 c.name as kategori_name,
                 p.name as performans_name
          FROM $actions_table a
          LEFT JOIN {$wpdb->users} u ON a.tanımlayan_id = u.ID AND a.tanımlayan_id > 0
+         LEFT JOIN {$wpdb->usermeta} um1 ON u.ID = um1.user_id AND um1.meta_key = 'first_name'
+         LEFT JOIN {$wpdb->usermeta} um2 ON u.ID = um2.user_id AND um2.meta_key = 'last_name'
          LEFT JOIN $categories_table c ON a.kategori_id = c.id
          LEFT JOIN $performance_table p ON a.performans_id = p.id
          WHERE a.sorumlu_ids LIKE %s
@@ -1625,10 +1641,12 @@ $performances = $wpdb->get_results("SELECT * FROM $performance_table ORDER BY na
                                                                     CASE 
                                                                         WHEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value)) != ''
                                                                         THEN TRIM(CONCAT(um1.meta_value, ' ', um2.meta_value))
-                                                                        ELSE u.display_name
+                                                                        WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                                                                        THEN u.display_name
+                                                                        ELSE COALESCE(u.user_login, 'Bilinmiyor')
                                                                     END as user_name 
                                                              FROM $notes_table n 
-                                                             LEFT JOIN {$wpdb->users} u ON n.user_id = u.ID 
+                                                             LEFT JOIN {$wpdb->users} u ON n.user_id = u.ID AND n.user_id > 0
                                                              LEFT JOIN {$wpdb->usermeta} um1 ON u.ID = um1.user_id AND um1.meta_key = 'first_name'
                                                              LEFT JOIN {$wpdb->usermeta} um2 ON u.ID = um2.user_id AND um2.meta_key = 'last_name'
                                                              WHERE n.task_id = %d 
