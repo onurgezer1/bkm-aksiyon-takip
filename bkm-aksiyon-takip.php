@@ -3,7 +3,7 @@
  * Plugin Name: BKM Aksiyon Takip (Action Tracking System)
  * Plugin URI: https://github.com/anadolubirlik/BKMAksiyonTakip_Claude4
  * Description: Professional action and task tracking system for WordPress. Manage team actions, track progress, set deadlines, and improve productivity.
- * Version: 1.0.6
+ * Version: 1.0.7
  * Author: Anadolu Birlik
  * Author URI: https://github.com/anadolubirlik
  * Text Domain: bkm-aksiyon-takip
@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('BKM_AKSIYON_TAKIP_VERSION', '1.0.6');
+define('BKM_AKSIYON_TAKIP_VERSION', '1.0.7');
 define('BKM_AKSIYON_TAKIP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BKM_AKSIYON_TAKIP_PLUGIN_FILE', __FILE__);
