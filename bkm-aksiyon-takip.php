@@ -119,6 +119,9 @@ class BKM_Aksiyon_Takip {
         add_action('wp_ajax_bkm_get_task_notes', array($this, 'ajax_get_task_notes'));
         add_action('wp_ajax_nopriv_bkm_get_task_notes', array($this, 'ajax_get_task_notes'));
         
+        // Admin-only cleanup endpoint
+        add_action('wp_ajax_bkm_cleanup_notes', array($this, 'ajax_cleanup_notes'));
+        
         // Category AJAX handlers
         add_action('wp_ajax_bkm_add_category', array($this, 'ajax_add_category'));
         add_action('wp_ajax_bkm_edit_category', array($this, 'ajax_edit_category'));
@@ -535,10 +538,56 @@ private function create_database_tables() {
     }
     
     /**
+     * Clean up orphan notes and fix data inconsistencies
+     */
+    private function cleanup_orphan_notes() {
+        global $wpdb;
+        
+        $notes_table = $wpdb->prefix . 'bkm_task_notes';
+        $tasks_table = $wpdb->prefix . 'bkm_tasks';
+        $users_table = $wpdb->prefix . 'users';
+        
+        // Delete notes that reference non-existent tasks
+        $orphan_task_notes = $wpdb->query("
+            DELETE n FROM $notes_table n 
+            LEFT JOIN $tasks_table t ON n.task_id = t.id 
+            WHERE t.id IS NULL
+        ");
+        
+        // Delete notes that reference non-existent users
+        $orphan_user_notes = $wpdb->query("
+            DELETE n FROM $notes_table n 
+            LEFT JOIN $users_table u ON n.user_id = u.ID 
+            WHERE u.ID IS NULL
+        ");
+        
+        // Log cleanup results
+        if ($orphan_task_notes > 0) {
+            error_log("🧹 Cleaned up $orphan_task_notes orphan notes with invalid task references");
+        }
+        if ($orphan_user_notes > 0) {
+            error_log("🧹 Cleaned up $orphan_user_notes orphan notes with invalid user references");
+        }
+        
+        // Fix notes with empty or invalid content
+        $empty_notes = $wpdb->query("
+            DELETE FROM $notes_table 
+            WHERE content IS NULL OR TRIM(content) = ''
+        ");
+        
+        if ($empty_notes > 0) {
+            error_log("🧹 Cleaned up $empty_notes empty notes");
+        }
+    }
+    
+    /**
      * Upgrade database structure for existing installations
      */
     private function upgrade_database_structure() {
         global $wpdb;
+        
+        // Clean up orphan notes first (notes without valid tasks or users)
+        $this->cleanup_orphan_notes();
         
         // Check and add progress column to bkm_task_notes table
         $notes_table = $wpdb->prefix . 'bkm_task_notes';
@@ -557,21 +606,21 @@ private function create_database_tables() {
             
             // Populate existing records with user names (first_name + last_name)
             $users = $wpdb->get_results("
-                SELECT u.ID, 
-                       COALESCE(
-                           CONCAT(
-                               TRIM(COALESCE(fn.meta_value, '')), 
-                               ' ', 
-                               TRIM(COALESCE(ln.meta_value, ''))
-                           ), 
-                           u.display_name, 
-                           'Bilinmeyen Kullanıcı'
-                       ) as full_name
+                SELECT DISTINCT u.ID, 
+                       CASE 
+                           WHEN TRIM(COALESCE(CONCAT(TRIM(COALESCE(fn.meta_value, '')), ' ', TRIM(COALESCE(ln.meta_value, ''))), '')) != ''
+                           THEN TRIM(CONCAT(TRIM(COALESCE(fn.meta_value, '')), ' ', TRIM(COALESCE(ln.meta_value, ''))))
+                           WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                           THEN u.display_name
+                           WHEN u.user_login IS NOT NULL AND u.user_login != ''
+                           THEN u.user_login
+                           ELSE CONCAT('Kullanıcı #', u.ID)
+                       END as full_name
                 FROM {$wpdb->users} u 
                 INNER JOIN $notes_table n ON u.ID = n.user_id 
                 LEFT JOIN {$wpdb->usermeta} fn ON u.ID = fn.user_id AND fn.meta_key = 'first_name'
                 LEFT JOIN {$wpdb->usermeta} ln ON u.ID = ln.user_id AND ln.meta_key = 'last_name'
-                WHERE n.user_name IS NULL
+                WHERE n.user_name IS NULL OR n.user_name = '' OR n.user_name = 'Bilinmeyen Kullanıcı'
             ");
             
             foreach ($users as $user) {
@@ -589,20 +638,20 @@ private function create_database_tables() {
             // Check if there are any notes with empty user_name and populate them with first_name + last_name
             $empty_user_names = $wpdb->get_results("
                 SELECT DISTINCT n.user_id, 
-                       COALESCE(
-                           CONCAT(
-                               TRIM(COALESCE(fn.meta_value, '')), 
-                               ' ', 
-                               TRIM(COALESCE(ln.meta_value, ''))
-                           ), 
-                           u.display_name, 
-                           'Bilinmeyen Kullanıcı'
-                       ) as full_name
+                       CASE 
+                           WHEN TRIM(COALESCE(CONCAT(TRIM(COALESCE(fn.meta_value, '')), ' ', TRIM(COALESCE(ln.meta_value, ''))), '')) != ''
+                           THEN TRIM(CONCAT(TRIM(COALESCE(fn.meta_value, '')), ' ', TRIM(COALESCE(ln.meta_value, ''))))
+                           WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                           THEN u.display_name
+                           WHEN u.user_login IS NOT NULL AND u.user_login != ''
+                           THEN u.user_login
+                           ELSE CONCAT('Kullanıcı #', n.user_id)
+                       END as full_name
                 FROM $notes_table n 
                 LEFT JOIN {$wpdb->users} u ON n.user_id = u.ID 
                 LEFT JOIN {$wpdb->usermeta} fn ON u.ID = fn.user_id AND fn.meta_key = 'first_name'
                 LEFT JOIN {$wpdb->usermeta} ln ON u.ID = ln.user_id AND ln.meta_key = 'last_name'
-                WHERE (n.user_name IS NULL OR n.user_name = '') AND u.ID IS NOT NULL
+                WHERE (n.user_name IS NULL OR n.user_name = '' OR n.user_name = 'Bilinmeyen Kullanıcı') AND u.ID IS NOT NULL
             ");
             
             if (!empty($empty_user_names)) {
@@ -2482,6 +2531,18 @@ public function ajax_get_notes() {
         wp_send_json_error('Geçersiz görev ID: ' . $task_id);
     }
     
+    // Verify that the task exists and current user has access to it
+    $tasks_table = $wpdb->prefix . 'bkm_tasks';
+    $task_exists = $wpdb->get_var($wpdb->prepare("
+        SELECT COUNT(*) FROM $tasks_table 
+        WHERE id = %d
+    ", $task_id));
+    
+    if (!$task_exists) {
+        error_log('❌ Task does not exist in ajax_get_notes: ' . $task_id);
+        wp_send_json_error('Belirtilen görev bulunamadı.');
+    }
+    
     $notes_table = $wpdb->prefix . 'bkm_task_notes';
     
     error_log("🗃️ Notlar için tablo: $notes_table, görev ID: $task_id");
@@ -2489,15 +2550,15 @@ public function ajax_get_notes() {
     // Get all notes for this task (both main notes and replies)
     $notes = $wpdb->get_results($wpdb->prepare("
         SELECT n.*, 
-               COALESCE(
-                   CONCAT(
-                       TRIM(COALESCE(fn.meta_value, '')), 
-                       ' ', 
-                       TRIM(COALESCE(ln.meta_value, ''))
-                   ), 
-                   u.display_name, 
-                   'Bilinmeyen Kullanıcı'
-               ) as user_name,
+               CASE 
+                   WHEN TRIM(COALESCE(CONCAT(TRIM(COALESCE(fn.meta_value, '')), ' ', TRIM(COALESCE(ln.meta_value, ''))), '')) != ''
+                   THEN TRIM(CONCAT(TRIM(COALESCE(fn.meta_value, '')), ' ', TRIM(COALESCE(ln.meta_value, ''))))
+                   WHEN u.display_name IS NOT NULL AND u.display_name != ''
+                   THEN u.display_name
+                   WHEN u.user_login IS NOT NULL AND u.user_login != ''
+                   THEN u.user_login
+                   ELSE CONCAT('Kullanıcı #', n.user_id)
+               END as user_name,
                u.user_login,
                u.user_email,
                fn.meta_value as first_name,
@@ -3002,7 +3063,36 @@ public function ajax_fix_action_statuses() {
     ));
 }
 
+/**
+ * AJAX handler for cleaning up orphan notes (admin only)
+ */
+public function ajax_cleanup_notes() {
+    // Check if user is admin
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Bu işlem için yetkiniz bulunmamaktadır.');
+    }
+    
+    // Verify nonce for security
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'bkm_admin_nonce')) {
+        wp_send_json_error('Güvenlik kontrolü başarısız oldu.');
+    }
+    
+    // Run cleanup
+    $this->cleanup_orphan_notes();
+    
+    global $wpdb;
+    $notes_table = $wpdb->prefix . 'bkm_task_notes';
+    
+    // Get current count of notes
+    $notes_count = $wpdb->get_var("SELECT COUNT(*) FROM $notes_table");
+    
+    wp_send_json_success([
+        'message' => 'Not temizliği başarıyla tamamlandı.',
+        'remaining_notes' => $notes_count
+    ]);
 }
+
+} // End of BKM_Aksiyon_Takip class
 
 // Initialize plugin
 BKM_Aksiyon_Takip::get_instance();
@@ -3034,3 +3124,5 @@ function bkm_get_users_callback() {
     wp_send_json_success(['users' => $user_data]);
     wp_die();
 }
+
+// End of file
